@@ -72,9 +72,3 @@ jobs:
             build/ClaudeUsage-Setup-*.exe.sha256
           generate_release_notes: true
           fail_on_unmatched_files: true
-          body: |
-            Instalação por usuário, sem admin. Baixe o `.exe`, dois cliques.
-
-            O SmartScreen vai avisar "editor desconhecido" no primeiro download,
-            porque o instalador não é assinado. Confira o SHA-256 publicado junto
-            se quiser validar o arquivo.
