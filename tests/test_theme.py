@@ -1,7 +1,23 @@
-"""Palette ramp and pt-BR formatters."""
+"""Palette ramp and formatters."""
 from __future__ import annotations
 
-from claude_usage import api, theme
+import pytest
+
+from claude_usage import api, i18n, theme
+
+
+@pytest.fixture(autouse=True)
+def _english():
+    """Pinned, not inherited from the machine.
+
+    These assertions used to read whatever language Windows was set to, so they
+    passed on a pt-BR desktop and failed on an English CI runner. Coverage of
+    the other language lives in test_i18n.py.
+    """
+    before = i18n.language()
+    i18n.set_language("en")
+    yield
+    i18n.set_language(before)
 
 
 def test_ramp_ends_match_the_palette():
@@ -21,22 +37,22 @@ def test_countdown_units():
     assert theme.fmt_countdown(now + 2 * 3600 + 13 * 60, now) == "2h13"
     assert theme.fmt_countdown(now + 47 * 60, now) == "47min"
     assert theme.fmt_countdown(now + 38, now) == "38s"
-    assert theme.fmt_countdown(now - 5, now) == "agora"
+    assert theme.fmt_countdown(now - 5, now) == "now"
     assert theme.fmt_countdown(0, now) == "--"
 
 
 def test_token_shortening():
     assert theme.fmt_tokens(512) == "512"
     assert theme.fmt_tokens(24_000) == "24k"
-    assert theme.fmt_tokens(6_029_281) == "6,0M"      # pt-BR decimal comma
+    assert theme.fmt_tokens(6_029_281) == "6.0M"
 
 
 def test_status_chip_follows_header_then_percentage():
     assert theme.status_label(api.Usage(ok=True, status_overall="allowed"))[0] == "OK"
-    assert theme.status_label(api.Usage(ok=True, status_overall="allowed_warning"))[0] == "ATENÇÃO"
-    assert theme.status_label(api.Usage(ok=True, status_overall="rejected"))[0] == "BLOQUEADO"
-    assert theme.status_label(api.Usage(ok=True, h5=95, status_overall="allowed"))[0] == "ATENÇÃO"
-    assert theme.status_label(api.Usage(ok=False))[0] == "SEM DADOS"
+    assert theme.status_label(api.Usage(ok=True, status_overall="allowed_warning"))[0] == "WARNING"
+    assert theme.status_label(api.Usage(ok=True, status_overall="rejected"))[0] == "BLOCKED"
+    assert theme.status_label(api.Usage(ok=True, h5=95, status_overall="allowed"))[0] == "WARNING"
+    assert theme.status_label(api.Usage(ok=False))[0] == "NO DATA"
 
 
 def test_window_elapsed_is_a_fraction():
