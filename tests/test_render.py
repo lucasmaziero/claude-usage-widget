@@ -74,12 +74,12 @@ def test_widget_paints_in_every_state(qapp, settings, snap):
         ("100%", "6d23h"),      # widest value and widest tail together
     ],
 )
-def test_row_value_never_reaches_the_tail(qapp, settings, value, tail):
+def test_row_value_never_reaches_the_tail(qapp, real_fonts, settings, value, tail):
     """The row is measured, not laid out at a fixed offset.
 
-    Asserted through the widget's own math so it holds under any font: the
-    offscreen platform resolves a fallback roughly 1.8x wider than Segoe UI, and
-    a hard pixel budget would be meaningless there.
+    Gated on the real font: eliding is the correct answer when the text genuinely
+    does not fit, and the offscreen fallback runs about 1.8x wider than Segoe UI,
+    so under it the widget rightly truncates and the assertion below is false.
     """
     w = FloatingWidget(settings)
     shown, tail_w, col_w = w.row_columns(value, tail)
