@@ -1,0 +1,4 @@
+# Normalize line endings in the repo; the checkout keeps what Windows expects.
+* text=auto eol=lf
+*.bat text eol=crlf
+*.png binary

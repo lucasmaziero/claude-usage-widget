@@ -1,0 +1,346 @@
+"""Application wiring: tray icon, widget, panel and the collection cycle."""
+from __future__ import annotations
+
+import contextlib
+import os
+import sys
+import time
+import winreg
+from pathlib import Path
+
+from PySide6.QtCore import QObject, QPointF, QRectF, Qt, QTimer
+from PySide6.QtGui import QAction, QActionGroup, QFont, QIcon, QPainter, QPixmap
+from PySide6.QtNetwork import QLocalServer, QLocalSocket
+from PySide6.QtWidgets import QApplication, QMenu, QSystemTrayIcon
+
+from . import i18n, paint, theme
+from .i18n import t
+from .panel import Panel
+from .poller import Poller, Snapshot
+from .settings import Settings
+from .widget import FloatingWidget
+
+APP_ID = "ClaudeUsageWidget"
+DEBUG = bool(os.environ.get("CLAUDE_USAGE_DEBUG"))
+RUN_KEY = r"Software\Microsoft\Windows\CurrentVersion\Run"
+TICK_MS = 1000              # reset countdowns advance between polls
+# The shell asks for the small-icon metric times the display scale, so 20px at
+# 125% becomes a request for 25. Without those in-between sizes Qt hands over a
+# larger pixmap and Windows shrinks it, which is exactly what smeared the icon.
+TRAY_SIZES = (16, 20, 24, 25, 30, 32, 40, 48)
+POLL_CHOICES = (30, 60, 120, 300, 900)
+
+
+def poll_label(seconds: int) -> str:
+    if seconds < 60:
+        return t("menu.seconds", n=seconds)
+    minutes = seconds // 60
+    return t("menu.minute") if minutes == 1 else t("menu.minutes", n=minutes)
+
+
+def _fit_in_square(label: str, side: float) -> int:
+    """Largest point size whose ink fits a square icon, with a pixel of air."""
+    for pt in range(16, 4, -1):
+        w, h = paint.ink(label, pt, QFont.Weight.DemiBold)
+        if w <= side - 2 and h <= side - 2:
+            return pt
+    return 5
+
+
+def tray_pixmap(snap: Snapshot | None, size: int = TRAY_SIZES[-1]) -> QPixmap:
+    """The 5h ring with the number inside, drawn for one exact icon size.
+
+    The ring is kept thin and pushed to the edge, and the number is fitted to
+    the square it encloses rather than to the circle. Fitting to the circle is
+    what a strict reading would ask for, but at tray sizes it costs five point
+    sizes - digits have empty corners, so the square is the honest bound.
+    """
+    pm = QPixmap(size, size)
+    pm.fill(Qt.GlobalColor.transparent)
+    p = QPainter(pm)
+    p.setRenderHint(QPainter.RenderHint.Antialiasing, True)
+    p.setRenderHint(QPainter.RenderHint.TextAntialiasing, True)
+
+    live = bool(snap and snap.ok)
+    pct = snap.usage.h5 if live else 0.0
+    radius = size * 0.45
+    thickness = max(size * 0.09, 1.6)
+    paint.ring(p, QPointF(size / 2, size / 2), radius, thickness, pct,
+               color=None if live else theme.TRACK)
+
+    label = f"{pct:.0f}" if live else "-"
+    inner_side = size - thickness * 2 - 2
+    paint.text(p, QRectF(0, 0, size, size), label, theme.TEXT,
+               _fit_in_square(label, inner_side), QFont.Weight.DemiBold,
+               Qt.AlignmentFlag.AlignCenter)
+    p.end()
+    return pm
+
+
+def tray_icon(snap: Snapshot | None) -> QIcon:
+    """One pixmap per size Windows asks for.
+
+    A single large pixmap scaled down by the shell smears the stroke and the
+    digits; drawing each size means the 16px icon is laid out for 16px.
+    """
+    icon = QIcon()
+    for size in TRAY_SIZES:
+        icon.addPixmap(tray_pixmap(snap, size))
+    return icon
+
+
+def autostart_enabled() -> bool:
+    try:
+        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, RUN_KEY) as key:
+            winreg.QueryValueEx(key, APP_ID)
+        return True
+    except OSError:
+        return False
+
+
+def set_autostart(enabled: bool) -> None:
+    """Register this venv's pythonw.exe, so no console flashes at logon."""
+    try:
+        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, RUN_KEY, 0, winreg.KEY_SET_VALUE) as key:
+            if not enabled:
+                with contextlib.suppress(FileNotFoundError):
+                    winreg.DeleteValue(key, APP_ID)
+                return
+            exe = Path(sys.executable)
+            pythonw = exe.with_name("pythonw.exe")
+            target = pythonw if pythonw.exists() else exe
+            cmd = (f'"{target}" -m claude_usage' if target.name.startswith("python")
+                   else f'"{target}"')       # a frozen build launches itself
+            winreg.SetValueEx(key, APP_ID, 0, winreg.REG_SZ, cmd)
+    except OSError:
+        pass
+
+
+class App(QObject):
+    """Owns the windows and the poller.
+
+    Must be a QObject: the poller's signals are emitted from its own thread, and
+    only a QObject receiver turns those connections into queued ones.
+    """
+
+    def __init__(self, qapp: QApplication) -> None:
+        super().__init__(qapp)
+        self.qapp = qapp
+        self.settings = Settings()
+        self.snap: Snapshot | None = None
+        i18n.set_language(self.settings["language"])
+
+        self.widget = FloatingWidget(self.settings)
+        self.panel = Panel(self.settings)
+        self.tray = QSystemTrayIcon(tray_icon(None))
+        self.poller = Poller(int(self.settings["poll_sec"]))
+
+        self._build_menu()
+        self.tray.setContextMenu(self.menu)
+        self.tray.setToolTip(t("tray.collecting"))
+        self.tray.activated.connect(self._tray_activated)
+        self.tray.show()
+
+        self.widget.clicked.connect(self.toggle_panel)
+        self.widget.menu_requested.connect(self._popup_menu)
+        self.widget.refresh_requested.connect(self.refresh)
+        self.panel.refresh_requested.connect(self.refresh)
+        self.poller.updated.connect(self.on_update)
+        self.poller.busy.connect(self.widget.set_busy)
+
+        if self.settings["widget_visible"]:
+            self.widget.show()
+
+        self.tick = QTimer(self)
+        self.tick.timeout.connect(self._tick)
+        self.tick.start(TICK_MS)
+
+        self.poller.start()
+        qapp.aboutToQuit.connect(self._shutdown)
+
+    # ------------------------------------------------------------------ menu
+    def _build_menu(self) -> None:
+        self.menu = QMenu()
+        self.menu.setStyleSheet(
+            f"QMenu {{ background:{theme.SURFACE.name()}; color:{theme.TEXT.name()};"
+            f" border:1px solid {theme.BORDER.name()}; border-radius:10px; padding:6px; }}"
+            f"QMenu::item {{ padding:6px 22px 6px 14px; border-radius:6px; }}"
+            f"QMenu::item:selected {{ background:{theme.SURFACE2.name()}; }}"
+            f"QMenu::separator {{ height:1px; background:{theme.BORDER.name()}; margin:5px 8px; }}"
+        )
+
+        act_refresh = QAction(t("menu.refresh_now"), self.menu)
+        act_refresh.triggered.connect(self.refresh)
+        self.menu.addAction(act_refresh)
+
+        act_panel = QAction(t("menu.open_panel"), self.menu)
+        act_panel.triggered.connect(self.toggle_panel)
+        self.menu.addAction(act_panel)
+        self.menu.addSeparator()
+
+        self.act_visible = self._check(t("menu.show_widget"), self.settings["widget_visible"],
+                                       self._toggle_widget)
+        self.act_compact = self._check(t("menu.compact"), self.settings["compact"],
+                                       self._toggle_compact)
+        self.act_locked = self._check(t("menu.lock"), self.settings["locked"],
+                                      self._toggle_locked)
+
+        self._submenu(t("menu.interval"), POLL_CHOICES, poll_label,
+                      int(self.settings["poll_sec"]), self._set_interval)
+        self._submenu(t("menu.language"), ["auto", *i18n.LANGUAGES],
+                      lambda code: t("menu.language_auto") if code == "auto"
+                      else i18n.LANGUAGES[code],
+                      self.settings["language"], self._set_language)
+
+        self.menu.addSeparator()
+        self.act_autostart = self._check(t("menu.autostart"), autostart_enabled(),
+                                         self._toggle_autostart)
+        self.menu.addSeparator()
+        act_quit = QAction(t("menu.quit"), self.menu)
+        act_quit.triggered.connect(self.qapp.quit)
+        self.menu.addAction(act_quit)
+
+    def _submenu(self, title: str, values, label, current, slot) -> None:
+        """A radio group: interval and language are both one-of-many."""
+        sub = self.menu.addMenu(title)
+        sub.setStyleSheet(self.menu.styleSheet())
+        group = QActionGroup(sub)
+        group.setExclusive(True)
+        for value in values:
+            act = QAction(label(value), sub, checkable=True)
+            act.setChecked(value == current)
+            act.triggered.connect(lambda _checked=False, v=value: slot(v))
+            group.addAction(act)
+            sub.addAction(act)
+
+    def _popup_menu(self, where) -> None:
+        # Not connected straight to self.menu.popup: the menu object is replaced
+        # when the language changes, and the old connection would outlive it.
+        self.menu.popup(where)
+
+    def _set_language(self, code: str) -> None:
+        self.settings["language"] = code
+        self.settings.save()
+        i18n.set_language(code)
+        self._build_menu()                 # labels live in the actions themselves
+        self.tray.setContextMenu(self.menu)
+        if self.snap:
+            self.on_update(self.snap)      # tooltips and painted strings
+        else:
+            self.tray.setToolTip(t("tray.collecting"))
+        self.widget.update()
+        self.panel.update()
+
+    def _check(self, label: str, checked: bool, slot) -> QAction:
+        act = QAction(label, self.menu, checkable=True)
+        act.setChecked(bool(checked))
+        act.toggled.connect(slot)
+        self.menu.addAction(act)
+        return act
+
+    # --------------------------------------------------------------- actions
+    def refresh(self) -> None:
+        self.poller.refresh()
+
+    def toggle_panel(self) -> None:
+        if self.panel.isVisible():
+            self.panel.hide()
+            return
+        if self.panel.just_closed():
+            return                    # this click is the one that closed it
+        anchor = QRectF(self.widget.geometry()) if self.widget.isVisible() else None
+        screen = self.widget.screen() if self.widget.isVisible() else self.qapp.primaryScreen()
+        self.panel.popup_at(anchor, screen)
+
+    def _toggle_widget(self, on: bool) -> None:
+        self.settings["widget_visible"] = on
+        self.settings.save()
+        self.widget.setVisible(on)
+
+    def _toggle_compact(self, on: bool) -> None:
+        self.settings["compact"] = on
+        self.settings.save()
+        self.widget.apply_size()
+        self.widget.restore_position()
+        self.widget.update()
+
+    def _toggle_locked(self, on: bool) -> None:
+        self.settings["locked"] = on
+        self.settings.save()
+
+    def _toggle_autostart(self, on: bool) -> None:
+        set_autostart(on)
+        self.act_autostart.setChecked(autostart_enabled())
+
+    def _set_interval(self, seconds: int) -> None:
+        self.settings["poll_sec"] = seconds
+        self.settings.save()
+        self.poller.set_interval(seconds)
+
+    def _tray_activated(self, reason) -> None:
+        if reason in (QSystemTrayIcon.ActivationReason.Trigger,
+                      QSystemTrayIcon.ActivationReason.DoubleClick):
+            self.toggle_panel()
+
+    # ----------------------------------------------------------------- cycle
+    def on_update(self, snap: Snapshot) -> None:
+        self.snap = snap
+        if DEBUG:
+            u = snap.usage
+            print(f"[{time.strftime('%H:%M:%S')}] ok={snap.ok} 5h={u.h5:.1f} "
+                  f"7d={u.d7:.1f} err={snap.error!r}", flush=True)
+        self.widget.set_snapshot(snap)
+        self.panel.set_snapshot(snap, self.poller.projection(snap.usage))
+        self.tray.setIcon(tray_icon(snap))
+        if snap.ok:
+            u = snap.usage
+            self.tray.setToolTip(t("tray.tooltip", h5=u.h5, d7=u.d7,
+                                   h5_clock=theme.fmt_clock(u.h5_reset),
+                                   d7_clock=theme.fmt_clock(u.d7_reset)))
+        else:
+            self.tray.setToolTip(t("widget.tooltip_error",
+                                   error=snap.error or t("widget.no_data")))
+
+    def _tick(self) -> None:
+        if self.widget.isVisible():
+            self.widget.update()
+        if self.panel.isVisible():
+            self.panel.update()
+
+    def _shutdown(self) -> None:
+        self.poller.stop()
+        self.poller.wait(3000)
+        self.tray.hide()
+
+
+def _already_running() -> bool:
+    """Single instance: a second launch notices the first and exits."""
+    probe = QLocalSocket()
+    probe.connectToServer(APP_ID)
+    if probe.waitForConnected(200):
+        probe.disconnectFromServer()
+        return True
+    QLocalServer.removeServer(APP_ID)     # clears a socket left by a crash
+    server = QLocalServer()
+    server.listen(APP_ID)
+    _already_running.server = server      # kept alive for the life of the process
+    return False
+
+
+def main() -> int:
+    QApplication.setAttribute(Qt.ApplicationAttribute.AA_DontShowIconsInMenus, False)
+    qapp = QApplication(sys.argv)
+    qapp.setApplicationName("Claude Usage Widget")
+    qapp.setQuitOnLastWindowClosed(False)
+
+    if _already_running():
+        return 0
+    if not QSystemTrayIcon.isSystemTrayAvailable():
+        print(t("error.no_tray"), file=sys.stderr)
+
+    app = App(qapp)          # the local reference keeps it alive during exec
+    return qapp.exec() if app else 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
