@@ -23,14 +23,19 @@ def qapp() -> QApplication:
 
 @pytest.fixture
 def real_fonts(qapp) -> None:
-    """Skip unless Qt resolved the actual UI font.
+    """Skip unless Qt resolved exactly the font the layout was measured against.
 
-    The offscreen plugin ships a stub font database whose fallback runs about
-    1.8x wider than Segoe UI, so any assertion in pixels is meaningless there.
+    Two ways to end up with different metrics: the offscreen plugin ships a stub
+    font database whose fallback runs about 1.8x wider, and Windows Server has
+    Segoe UI but not the Variable Display cut that ships with Windows 11. A name
+    check passes the second case and then measures the wrong font, so this asks
+    for an exact match.
+
     Run the whole suite against the real thing with:
 
         $env:QT_QPA_PLATFORM = "windows"; uv run pytest
     """
-    family = QFontInfo(QFont("Segoe UI Variable Display")).family()
-    if not family.startswith("Segoe"):
-        pytest.skip(f"needs the real UI font, Qt resolved {family!r}")
+    wanted = QFont("Segoe UI Variable Display")
+    if not wanted.exactMatch():
+        got = QFontInfo(wanted).family() or "no font database"
+        pytest.skip(f"needs Segoe UI Variable Display, Qt resolved {got!r}")

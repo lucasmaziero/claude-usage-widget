@@ -22,4 +22,15 @@ jobs:
 
       - run: uv run ruff check .
 
-      - run: uv run pytest
+      # Run logs need a token to read; annotations do not. Failing summaries go
+      # into one so a red build can be diagnosed from the commit page.
+      - name: Test
+        shell: pwsh
+        run: |
+          $out = uv run pytest --tb=short 2>&1 | Out-String
+          Write-Host $out
+          if ($LASTEXITCODE -ne 0) {
+            $tail = (($out -split "`n" | Select-Object -Last 30) -join '%0A')
+            Write-Host "::error title=pytest::$tail"
+            exit 1
+          }
