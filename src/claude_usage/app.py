@@ -28,6 +28,8 @@ TICK_MS = 1000              # reset countdowns advance between polls
 # macOS asks for 22pt at 1x and 2x, and Linux panels pick from the same set.
 TRAY_SIZES = (16, 20, 22, 24, 25, 30, 32, 40, 44, 48)
 POLL_CHOICES = (30, 60, 120, 300, 900)
+ALERT_CHOICES = (0, 50, 70, 80, 90)     # 0 is off
+ALERT_MS = 12000                        # long enough to read, short enough to ignore
 
 
 def poll_label(seconds: int) -> str:
@@ -44,6 +46,17 @@ def _fit_in_square(label: str, side: float) -> int:
         if w <= side - 2 and h <= side - 2:
             return pt
     return 5
+
+
+def alert_due(snap: Snapshot, at: int, alerted_for: int) -> bool:
+    """Whether this snapshot is the first of its window to cross the threshold.
+
+    Keyed on the window's own reset time rather than a flag, so the alert fires
+    once per window and rearms by itself when the window rolls over - including
+    across a restart, since a fresh process has announced nothing.
+    """
+    usage = snap.usage
+    return bool(at and snap.ok and usage.h5 >= at and usage.h5_reset != alerted_for)
 
 
 def tray_surface_is_light() -> bool:
@@ -138,6 +151,7 @@ class App(QObject):
         self.qapp = qapp
         self.settings = Settings()
         self.snap: Snapshot | None = None
+        self._alerted_for = -1                # the window reset already announced
         self.about: About | None = None       # built on first use, dropped on a
                                               # language change so it rebuilds
         i18n.set_language(self.settings["language"])
@@ -209,6 +223,9 @@ class App(QObject):
 
         self._submenu(t("menu.interval"), POLL_CHOICES, poll_label,
                       int(self.settings["poll_sec"]), self._set_interval)
+        self._submenu(t("menu.alert"), ALERT_CHOICES,
+                      lambda pct: t("menu.alert_off") if pct == 0 else f"{pct}%",
+                      int(self.settings["alert_at"]), self._set_alert)
         self._submenu(t("menu.language"), ["auto", *i18n.LANGUAGES],
                       lambda code: t("menu.language_auto") if code == "auto"
                       else i18n.LANGUAGES[code],
@@ -322,6 +339,35 @@ class App(QObject):
         autostart.set_enabled(on)
         self.act_autostart.setChecked(autostart.enabled())
 
+    def _set_alert(self, percent: int) -> None:
+        self.settings["alert_at"] = percent
+        self.settings.save()
+        # A threshold just lowered past where usage already is should fire now,
+        # not at the next window.
+        self._alerted_for = -1
+        if self.snap:
+            self._maybe_alert(self.snap)
+
+    def _maybe_alert(self, snap: Snapshot) -> None:
+        """One notification per window, when the 5h number first crosses the
+        threshold.
+
+        The widget is a display, and a display only works if you look at it.
+        This is the one place the app speaks first, so it says the thing worth
+        acting on: not that you are at 80%, but how long that leaves you.
+        """
+        u = snap.usage
+        if not alert_due(snap, int(self.settings["alert_at"]), self._alerted_for):
+            return
+        self._alerted_for = u.h5_reset
+
+        projection = self.poller.projection(u)
+        clock = theme.fmt_clock(u.h5_reset)
+        body = (t("alert.body_rate", projection=projection.lstrip("~"), clock=clock)
+                if projection else t("alert.body", clock=clock))
+        self.tray.showMessage(t("alert.title", pct=u.h5), body,
+                              tray_icon(snap), ALERT_MS)
+
     def _set_interval(self, seconds: int) -> None:
         self.settings["poll_sec"] = seconds
         self.settings.save()
@@ -341,6 +387,7 @@ class App(QObject):
                   f"7d={u.d7:.1f} err={snap.error!r}", flush=True)
         self.widget.set_snapshot(snap)
         self.panel.set_snapshot(snap, self.poller.projection(snap.usage))
+        self._maybe_alert(snap)
         self.tray.setIcon(tray_icon(snap))
         if snap.ok:
             u = snap.usage

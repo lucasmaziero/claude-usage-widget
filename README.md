@@ -146,6 +146,11 @@ someone's behalf is not a thing a usage widget should do.
 has to shrink it, including the in-between sizes display scaling asks for (25px at 125%). The
 tooltip carries both windows.
 
+**Alerts.** A widget is a display, and a display only works if you look at it. Once per five-hour
+window, when the number first crosses the threshold, the app says so through the system's own
+notifications - and it says the thing worth acting on: not that you are at 80%, but that at this
+rate you hit 100% in forty minutes. Set the threshold in the menu, or turn it off there.
+
 **About.** A small card with the version, the author, the licence and the repository, plus a
 **Check for updates** button. That check runs only when you press it: there is no background poll
 and no auto-update. It reads the latest tag from GitHub, and if it is ahead of the running build it
@@ -167,6 +172,7 @@ basis for the second claim.
 | Compact mode | Shrinks the widget to the ring |
 | Lock position | Ignores dragging |
 | Interval | 30 s to 15 min, 2 min by default |
+| Alert at | Notify once per window at this percent, 80% by default; Off turns it off |
 | Language | Automatic, Português, English |
 | Start with *&lt;your OS&gt;* | Named after the system it is running on; one mechanism each, see below |
 | Check for updates | Asks GitHub for the latest tag, once, when you click it |
@@ -329,6 +335,11 @@ Things that cost time and that the code alone does not explain:
 - **Clicking the widget while the panel is open arrives in two parts.** The `Qt.Popup` closes itself
   on the outside click and the widget receives that same click next; without a guard the panel
   closed and reopened in one gesture. `Panel.just_closed()` swallows the second event for 250 ms.
+- **The burn rate used to die for hours after every window reset.** The sample deque was bounded
+  by count, not by time, so the readings from the previous window stayed in it; `burn_rate()` saw
+  the percentage fall, took that for a reset, and returned zero until they aged out - up to six
+  hours. Samples are now dropped once they predate the current window, which is also what makes the
+  baseline safe to keep on disk between runs.
 - **Text is measured, never placed at a fixed offset.** `56min` is half again as wide as `2h13` and
   used to run into the clock column. Digits use `tnum` (`QFont.setFeature`), otherwise `1` is
   narrower than the other digits and the countdown jitters every second.

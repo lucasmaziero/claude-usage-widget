@@ -35,6 +35,7 @@ STRINGS: dict[str, dict[str, str]] = {
         "panel.tokens_other": "{total} tokens · {cache} cache · {n} sessions",
         "panel.no_incidents": "status.claude.com reports no incidents",
         "panel.updated": "updated {stamp} · every {cadence}",
+        "panel.updated_idle": "updated {stamp} · every {cadence}, idle",
         "panel.refresh_now": "refresh now",
         # status chip
         "status.ok": "OK",
@@ -51,6 +52,11 @@ STRINGS: dict[str, dict[str, str]] = {
         "menu.language": "Language",
         "menu.language_auto": "Automatic",
         "menu.autostart": "Start with {os}",
+        "menu.alert": "Alert at",
+        "menu.alert_off": "Off",
+        "alert.title": "{pct:.0f}% of the 5-hour window",
+        "alert.body": "Resets at {clock}.",
+        "alert.body_rate": "At this rate it hits 100% in {projection}. Resets at {clock}.",
         "panel.get_claude": "Get Claude Code",
         # about
         "menu.about": "About",
@@ -77,6 +83,7 @@ STRINGS: dict[str, dict[str, str]] = {
         # long line, and the tail is the half that tells the user what to do.
         "error.no_credentials": "run `claude` once to sign in - {path} not found",
         "error.no_claude": "no sign of Claude Code on this machine",
+        "error.expired": "run `claude` to refresh - the saved token expired",
         "error.no_keychain": ("run `claude` once to sign in - no token in the "
                               "login keychain"),
         "error.unreadable": "could not read {path}: {reason}",
@@ -106,6 +113,7 @@ STRINGS: dict[str, dict[str, str]] = {
         "panel.tokens_other": "{total} tokens · {cache} cache · {n} sessões",
         "panel.no_incidents": "status.claude.com sem incidentes",
         "panel.updated": "atualizado {stamp} · a cada {cadence}",
+        "panel.updated_idle": "atualizado {stamp} · a cada {cadence}, ocioso",
         "panel.refresh_now": "atualizar agora",
         # status chip
         "status.ok": "OK",
@@ -122,6 +130,11 @@ STRINGS: dict[str, dict[str, str]] = {
         "menu.language": "Idioma",
         "menu.language_auto": "Automático",
         "menu.autostart": "Iniciar com o {os}",
+        "menu.alert": "Alertar em",
+        "menu.alert_off": "Desligado",
+        "alert.title": "{pct:.0f}% da janela de 5 horas",
+        "alert.body": "Reseta às {clock}.",
+        "alert.body_rate": "Nesse ritmo estoura em {projection}. Reseta às {clock}.",
         "panel.get_claude": "Instalar o Claude Code",
         # sobre
         "menu.about": "Sobre",
@@ -146,6 +159,7 @@ STRINGS: dict[str, dict[str, str]] = {
         # errors, all user facing
         "error.no_credentials": "faça login com `claude` uma vez - {path} não existe",
         "error.no_claude": "nenhum sinal do Claude Code nesta máquina",
+        "error.expired": "rode `claude` para renovar - o token salvo expirou",
         "error.no_keychain": ("faça login com `claude` uma vez - sem token no "
                               "chaveiro"),
         "error.unreadable": "não consegui ler {path}: {reason}",

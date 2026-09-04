@@ -144,6 +144,11 @@ um widget de uso deva fazer.
 precisar reduzir nada, inclusive nos tamanhos que a escala do monitor pede (25px a 125%). O tooltip
 traz as duas janelas.
 
+**Alertas.** Um widget é um mostrador, e mostrador só funciona se você olhar. Uma vez por janela
+de cinco horas, quando o número cruza o limiar pela primeira vez, o app avisa pelas notificações do
+próprio sistema — e diz o que dá para agir em cima: não que você está em 80%, mas que nesse ritmo
+você estoura em quarenta minutos. O limiar fica no menu, e desligar também.
+
 **Sobre.** Um cartão pequeno com a versão, o autor, a licença e o repositório, mais um botão
 **Verificar atualizações**. Essa verificação só roda quando você aperta: não há checagem em segundo
 plano nem atualização automática. Ele lê a última tag do GitHub e, se estiver à frente do build em
@@ -165,6 +170,7 @@ não tem base para a segunda afirmação.
 | Modo compacto | Reduz o widget ao anel |
 | Travar posição | Ignora o arrasto |
 | Intervalo | 30 s a 15 min, padrão 2 min |
+| Alertar em | Notifica uma vez por janela nessa porcentagem, padrão 80%; Desligado desliga |
 | Idioma | Automático, Português, English |
 | Iniciar com o *&lt;seu sistema&gt;* | Leva o nome do sistema em que roda; um mecanismo para cada, ver abaixo |
 | Verificar atualizações | Pergunta ao GitHub qual é a última tag, uma vez, quando você clica |
@@ -330,6 +336,11 @@ Coisas que custaram tempo e que o código sozinho não explica:
 - **Clicar no widget com o painel aberto chega em duas partes.** O `Qt.Popup` se fecha sozinho no
   clique de fora e o widget recebe o mesmo clique em seguida; sem guarda, o painel fechava e reabria
   no mesmo gesto. `Panel.just_closed()` engole o segundo evento por 250 ms.
+- **A taxa de queima morria por horas depois de cada reset de janela.** O deque de amostras era
+  limitado por quantidade, não por tempo, então as leituras da janela anterior continuavam nele; o
+  `burn_rate()` via a porcentagem cair, tomava aquilo por reset e devolvia zero até elas saírem pela
+  idade — até seis horas. Agora as amostras são descartadas quando são anteriores à janela atual, o
+  que é também o que torna seguro guardar a linha de base em disco entre execuções.
 - **Texto é medido, nunca posicionado por deslocamento fixo.** `56min` é meia vez mais largo que
   `2h13` e invadia a coluna do relógio. Os algarismos usam `tnum` (`QFont.setFeature`), senão o `1`
   é mais estreito que os outros dígitos e a contagem treme a cada segundo.

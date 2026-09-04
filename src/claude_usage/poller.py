@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import contextlib
+import json
 import threading
 import time
 from collections import deque
@@ -9,8 +10,10 @@ from dataclasses import dataclass, field
 
 from PySide6.QtCore import QThread, Signal
 
-from . import api, credentials, signin, tokens
+from . import api, credentials, paths, signin, tokens
 from .i18n import t
+
+HISTORY_FILE = paths.config_dir() / "history.json"
 
 
 @dataclass
@@ -23,6 +26,7 @@ class Snapshot:
     subscription: str = ""
     error: str = ""
     setup: str = ""            # signin.INSTALL or signin.SIGNIN, else empty
+    interval: int = 0          # seconds until the next fetch, backoff included
     at: float = field(default_factory=time.time)
 
     @property
@@ -41,7 +45,14 @@ class Poller(QThread):
     busy = Signal(bool)        # True while a cycle is in flight
 
     STATUS_EVERY = 300         # incidents move slowly; every 5 min is plenty
-    HISTORY_MAX = 180          # ~6h of samples at the default interval
+    HISTORY_MAX = 180          # more than a 5h window holds at any interval
+
+    # Polling every two minutes while the number does not move buys nothing and
+    # still costs a request each time. After this many identical readings the
+    # wait stretches, up to this multiple of the interval the user chose; any
+    # movement, any error, or a manual refresh puts it straight back.
+    IDLE_AFTER = 3
+    IDLE_MAX = 4
 
     def __init__(self, interval: int, parent=None) -> None:
         super().__init__(parent)
@@ -50,13 +61,17 @@ class Poller(QThread):
         self._stop = False
         self._last_status = 0.0
         self._incidents: list[str] = []
+        self._idle = 0                       # consecutive readings that did not move
+        self._last_h5: float | None = None
         self.history: deque[tuple[float, float]] = deque(maxlen=self.HISTORY_MAX)
+        self._load_history()
 
     def set_interval(self, seconds: int) -> None:
         self._interval = seconds
         self._wake.set()
 
     def refresh(self) -> None:
+        self._idle = 0                       # asking by hand means asking now
         self._wake.set()
 
     def stop(self) -> None:
@@ -67,20 +82,38 @@ class Poller(QThread):
         while not self._stop:
             self.busy.emit(True)
             snap = self._collect()
+            # Stamped here rather than inside _collect so the number the UI
+            # counts down from is the one this loop actually waits.
+            snap.interval = self._effective_interval()
             self.updated.emit(snap)   # data first, so the spinner stops on fresh values
             self.busy.emit(False)
-            self._wake.wait(self._interval)
+            self._wake.wait(snap.interval)
             self._wake.clear()
+
+    def _effective_interval(self) -> int:
+        """The chosen interval while anything is moving, stretched while nothing
+        is. Never longer than IDLE_MAX times what the user asked for."""
+        if self._idle < self.IDLE_AFTER:
+            return self._interval
+        factor = min(2 ** (self._idle - self.IDLE_AFTER + 1), self.IDLE_MAX)
+        return self._interval * factor
 
     def _collect(self) -> Snapshot:
         try:
             creds = credentials.load()
+            if creds.expired:
+                # The timestamp is the one Claude Code itself refreshes against,
+                # so the request would come back 401. Skipping it saves a token
+                # and says what is actually wrong instead of quoting a status.
+                self._idle = 0
+                return Snapshot(error=t("error.expired"), setup=signin.SIGNIN)
         except credentials.CredentialsError as exc:
             # Two dead ends wear the same exception. "Run `claude` to sign in"
             # is wrong advice for someone who has never installed it, so the
             # message is chosen here rather than where the file was missed.
             need = signin.needed()
             message = t("error.no_claude") if need == signin.INSTALL else str(exc)
+            self._idle = 0
             return Snapshot(error=message, setup=need)
 
         usage = api.fetch_usage(creds.token)
@@ -88,9 +121,23 @@ class Poller(QThread):
                         error="" if usage.ok else usage.error)
 
         if usage.ok:
+            moved = self._last_h5 is None or abs(usage.h5 - self._last_h5) >= 0.05
+            self._idle = 0 if moved else self._idle + 1
+            self._last_h5 = usage.h5
+
+            start = tokens.window_start(usage.h5_reset)
             self.history.append((time.time(), usage.h5))
+            # Samples from before this window describe a different one. Left in,
+            # they made burn_rate see the percentage fall and report zero for
+            # hours after every reset.
+            while self.history and self.history[0][0] < start:
+                self.history.popleft()
+            self._save_history()
+
             with contextlib.suppress(OSError):
-                snap.totals = tokens.collect(tokens.window_start(usage.h5_reset))
+                snap.totals = tokens.collect(start)
+        else:
+            self._idle = 0                   # a failure is no reason to look away
 
         now = time.time()
         if now - self._last_status >= self.STATUS_EVERY:
@@ -99,11 +146,39 @@ class Poller(QThread):
         snap.incidents = list(self._incidents)
         return snap
 
-    def burn_rate(self) -> float:
-        """Percentage points per hour on the 5h window, from this session's samples.
+    # ------------------------------------------------------------- history
+    def _load_history(self) -> None:
+        """Samples from the last run, so the projection is not blank for the
+        first three minutes of every session - which, for an app that starts
+        with the session, is exactly when it is wanted."""
+        try:
+            stored = json.loads(HISTORY_FILE.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            return
+        cutoff = time.time() - tokens.WINDOW_SECONDS
+        for item in stored[-self.HISTORY_MAX:]:
+            try:
+                when, pct = float(item[0]), float(item[1])
+            except (TypeError, ValueError, IndexError):
+                continue                     # one bad row must not lose the rest
+            if when >= cutoff:
+                self.history.append((when, pct))
 
-        Returns 0 while there is no baseline yet, and after a window reset drops
-        the percentage back down.
+    def _save_history(self) -> None:
+        try:
+            HISTORY_FILE.parent.mkdir(parents=True, exist_ok=True)
+            HISTORY_FILE.write_text(
+                json.dumps([[round(w, 1), round(p, 2)] for w, p in self.history]),
+                encoding="utf-8")
+        except OSError:
+            pass                             # a lost baseline must never take the app down
+
+    def burn_rate(self) -> float:
+        """Percentage points per hour on the 5h window.
+
+        Samples survive a restart and are pruned to the current window, so this
+        answers within a cycle of starting rather than after a fresh baseline.
+        Returns 0 with no baseline, or if the percentage fell.
         """
         if len(self.history) < 2:
             return 0.0

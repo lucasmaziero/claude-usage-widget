@@ -220,9 +220,13 @@ class Panel(QWidget):
                        QFont.Weight.DemiBold)
         else:
             stamp = time.strftime("%H:%M:%S", time.localtime(snap.at)) if snap else "--:--:--"
-            every = int(self.settings["poll_sec"])
+            chosen = int(self.settings["poll_sec"])
+            every = snap.interval if snap and snap.interval else chosen
             cadence = f"{every}s" if every < 60 else f"{every // 60}min"
-            paint.text(p, foot, t("panel.updated", stamp=stamp, cadence=cadence), theme.FAINT, 8)
+            # Marked when it is not what the menu says, so a fetch that looks
+            # overdue reads as a decision rather than a stall.
+            key = "panel.updated_idle" if every > chosen else "panel.updated"
+            paint.text(p, foot, t(key, stamp=stamp, cadence=cadence), theme.FAINT, 8)
         paint.text(p, self._refresh_zone().translated(-M, -M), t("panel.refresh_now"),
                    theme.ACCENT if self._hover_refresh else theme.MUTED, 8, align=right)
 

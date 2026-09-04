@@ -64,3 +64,53 @@ def test_rate_limited_response_still_yields_usage():
     usage = api.parse(HEADERS_OK | {api.UST: "rejected"}, 429)
     assert usage.ok
     assert usage.status_overall == "rejected"
+
+
+# ------------------------------------------------------------------ retries
+def test_a_dropped_connection_is_retried(monkeypatch):
+    """One lost packet used to paint the widget red until the next cycle, which
+    at the longest interval is fifteen minutes of showing a one-second fault."""
+    import urllib.error
+
+    attempts = []
+
+    def flaky(_request):
+        attempts.append(1)
+        if len(attempts) == 1:
+            raise urllib.error.URLError("connection reset")
+        return HEADERS_OK, 200
+
+    monkeypatch.setattr(api, "_probe", flaky)
+    monkeypatch.setattr(api.time, "sleep", lambda _s: None)
+
+    usage = api.fetch_usage("token")
+    assert usage.ok
+    assert len(attempts) == 2
+
+
+def test_it_gives_up_and_says_why(monkeypatch):
+    import urllib.error
+
+    def offline(_request):
+        raise urllib.error.URLError("offline")
+
+    monkeypatch.setattr(api, "_probe", offline)
+    monkeypatch.setattr(api.time, "sleep", lambda _s: None)
+
+    usage = api.fetch_usage("token")
+    assert not usage.ok
+    assert "offline" in usage.error
+
+
+def test_an_http_answer_is_not_retried(monkeypatch):
+    """429 carries the rate-limit headers, which is the point of the request.
+    Retrying it would double the cost of being rate limited."""
+    attempts = []
+
+    def rate_limited(_request):
+        attempts.append(1)
+        return HEADERS_OK, 429
+
+    monkeypatch.setattr(api, "_probe", rate_limited)
+    api.fetch_usage("token")
+    assert len(attempts) == 1

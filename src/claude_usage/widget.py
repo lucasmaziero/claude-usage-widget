@@ -306,7 +306,10 @@ class FloatingWidget(QWidget):
             paint.arc(p, center, ORBIT_R, ORBIT_T, self._spin, 80.0, spin)
             return
 
-        interval = max(int(self.settings["poll_sec"]), 1)
+        # The poller stretches its wait while nothing moves, so counting
+        # down from the chosen interval would empty the arc early and
+        # leave it sitting at zero.
+        interval = max(snap.interval or int(self.settings["poll_sec"]), 1)
         left = 1.0 - min(max((time.time() - snap.at) / interval, 0.0), 1.0)
         if left <= 0.005:
             return

@@ -24,6 +24,7 @@ DEFAULTS: dict = {
     "widget_visible": True,
     "compact": False,       # ring only, no text rows
     "language": "auto",     # auto follows the system; "en" or "pt_BR" pin it
+    "alert_at": 80,         # notify once per window at this percent; 0 is off
 }
 
 

@@ -22,6 +22,8 @@ ANTHROPIC_VERSION = "2023-06-01"
 PROBE_MODEL = "claude-haiku-4-5-20251001"
 USER_AGENT = "claude-code/2.1.5"
 TIMEOUT = 15
+RETRIES = 1          # one more go before calling it a failure
+RETRY_WAIT = 1.5
 
 H5U = "anthropic-ratelimit-unified-5h-utilization"
 H5R = "anthropic-ratelimit-unified-5h-reset"
@@ -105,8 +107,32 @@ def parse(headers, code: int) -> Usage:
     )
 
 
+def _probe(req) -> tuple:
+    """One round trip, reduced to the headers and the status code.
+
+    An HTTP error is an answer, not a failure: 429 and friends still carry the
+    rate-limit headers, which is the whole point of the request. Only the
+    network-level exceptions escape, for the caller to retry.
+    """
+    try:
+        ctx = ssl.create_default_context()
+        with urllib.request.urlopen(req, timeout=TIMEOUT, context=ctx) as resp:
+            headers, code = resp.headers, resp.status
+            resp.read()
+    except urllib.error.HTTPError as exc:
+        headers, code = exc.headers, exc.code
+        exc.read()
+    return headers, code
+
+
 def fetch_usage(token: str) -> Usage:
-    """One probe request. Never raises: failures come back as ok=False."""
+    """The probe request, retried once. Never raises: failures come back as
+    ok=False.
+
+    Without the retry a single dropped packet paints the widget red until the
+    next cycle, which at the longest interval is fifteen minutes of showing a
+    failure that lasted a second.
+    """
     body = json.dumps(
         {
             "model": PROBE_MODEL,
@@ -118,21 +144,19 @@ def fetch_usage(token: str) -> Usage:
         MESSAGES_ENDPOINT, data=body, headers=_headers(token), method="POST"
     )
 
-    try:
-        ctx = ssl.create_default_context()
-        with urllib.request.urlopen(req, timeout=TIMEOUT, context=ctx) as resp:
-            headers, code = resp.headers, resp.status
-            resp.read()
-    except urllib.error.HTTPError as exc:
-        # 429 and friends still carry the rate-limit headers, which is the point.
-        headers, code = exc.headers, exc.code
-        exc.read()
-    except urllib.error.URLError as exc:
-        return Usage(ok=False, error=t("error.network", reason=exc.reason))
-    except OSError as exc:
-        return Usage(ok=False, error=t("error.network", reason=exc))
+    problem: Exception | None = None
+    for attempt in range(RETRIES + 1):
+        try:
+            return parse(*_probe(req))
+        except (urllib.error.URLError, OSError) as exc:
+            # HTTPError is a URLError subclass but _probe has already turned it
+            # into headers, so anything caught here is the connection itself.
+            problem = exc
+            if attempt < RETRIES:
+                time.sleep(RETRY_WAIT)
 
-    return parse(headers, code)
+    reason = getattr(problem, "reason", problem)
+    return Usage(ok=False, error=t("error.network", reason=reason))
 
 
 def fetch_incidents() -> list[str]:
