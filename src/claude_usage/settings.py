@@ -1,12 +1,16 @@
-r"""User preferences, stored in %APPDATA%\ClaudeUsageWidget\settings.json."""
+"""User preferences, in the per-user config directory of whatever OS is running.
+
+See `paths.config_dir` for the three locations.
+"""
 from __future__ import annotations
 
 import json
-import os
 from pathlib import Path
 
-CONFIG_DIR = Path(os.environ.get("APPDATA") or Path.home()) / "ClaudeUsageWidget"
-CONFIG_FILE = CONFIG_DIR / "settings.json"
+from .paths import config_dir, config_file
+
+CONFIG_DIR = config_dir()
+CONFIG_FILE = config_file()
 
 MIN_POLL = 30
 MAX_POLL = 900
@@ -19,7 +23,7 @@ DEFAULTS: dict = {
     "locked": False,        # ignore dragging
     "widget_visible": True,
     "compact": False,       # ring only, no text rows
-    "language": "auto",     # auto follows Windows; "en" or "pt_BR" pin it
+    "language": "auto",     # auto follows the system; "en" or "pt_BR" pin it
 }
 
 

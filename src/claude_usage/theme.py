@@ -18,6 +18,9 @@ SURFACE2 = QColor("#24242C")
 TRACK = QColor("#26262E")
 BORDER = QColor("#30303A")
 TEXT = QColor("#F2F0EC")
+# Only the tray uses this: the app's own surfaces are always dark, but the
+# taskbar, menu bar or panel the icon sits on may not be.
+INK_LIGHT = QColor("#17171C")
 MUTED = QColor("#8C8C98")
 FAINT = QColor("#5C5C68")
 ACCENT = QColor("#D97757")   # Claude coral

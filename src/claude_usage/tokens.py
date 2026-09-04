@@ -7,13 +7,14 @@ the same machine, so it reads them straight off the disk.
 from __future__ import annotations
 
 import json
-import os
 import time
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
-PROJECTS = Path(os.path.expanduser("~")) / ".claude" / "projects"
+from .paths import projects_dir
+
+PROJECTS = projects_dir()
 WINDOW_SECONDS = 5 * 3600
 
 

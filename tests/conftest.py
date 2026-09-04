@@ -11,7 +11,6 @@ import os
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 import pytest
-from PySide6.QtGui import QFont, QFontInfo
 from PySide6.QtWidgets import QApplication
 
 
@@ -23,19 +22,28 @@ def qapp() -> QApplication:
 
 @pytest.fixture
 def real_fonts(qapp) -> None:
-    """Skip unless Qt resolved exactly the font the layout was measured against.
+    """Skip unless the layout was actually measured against the resolved font.
 
-    Two ways to end up with different metrics: the offscreen plugin ships a stub
-    font database whose fallback runs about 1.8x wider, and Windows Server has
-    Segoe UI but not the Variable Display cut that ships with Windows 11. A name
-    check passes the second case and then measures the wrong font, so this asks
-    for an exact match.
+    The geometry constants (ring radius, column widths, the point sizes that
+    make "100%" fit) were derived from one font's metrics. Three ways to end up
+    measuring a different one: the offscreen plugin ships a stub font database
+    whose fallback runs about 1.8x wider, Windows Server has Segoe UI but not
+    the Variable Display cut, and macOS and Linux resolve their own families
+    entirely.
+
+    So the gate is not "did we get a font" but "did we get one of the fonts the
+    numbers in widget.py were written for" - see `paint.MEASURED`. Porting the
+    layout to another platform means measuring there and adding it to that set.
 
     Run the whole suite against the real thing with:
 
-        $env:QT_QPA_PLATFORM = "windows"; uv run pytest
+        $env:QT_QPA_PLATFORM = "windows"; uv run pytest     # Windows
+        QT_QPA_PLATFORM=cocoa uv run pytest                 # macOS
+        QT_QPA_PLATFORM=xcb uv run pytest                   # Linux
     """
-    wanted = QFont("Segoe UI Variable Display")
-    if not wanted.exactMatch():
-        got = QFontInfo(wanted).family() or "no font database"
-        pytest.skip(f"needs Segoe UI Variable Display, Qt resolved {got!r}")
+    from claude_usage import paint
+
+    resolved = paint.family()
+    if resolved not in paint.MEASURED:
+        pytest.skip(f"layout not measured for {resolved!r}; "
+                    f"known: {', '.join(sorted(paint.MEASURED))}")

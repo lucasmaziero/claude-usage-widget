@@ -2,11 +2,13 @@
 from __future__ import annotations
 
 import math
+import sys
 
 from PySide6.QtCore import QPointF, QRectF, Qt
 from PySide6.QtGui import (
     QColor,
     QFont,
+    QFontDatabase,
     QFontMetricsF,
     QPainter,
     QPainterPath,
@@ -15,18 +17,52 @@ from PySide6.QtGui import (
 
 from . import theme
 
+# The UI font of each platform, best cut first. Only the families a desktop
+# ships by default are listed: a widget must never depend on the user having
+# installed something. Linux has no such family, so the list is a courtesy and
+# the real answer comes from whatever the desktop is configured to use.
+CANDIDATES = {
+    "win32": ("Segoe UI Variable Display", "Segoe UI"),
+    "darwin": ("SF Pro Display", "SF Pro Text", "Helvetica Neue"),
+    "linux": ("Inter", "Cantarell", "Ubuntu", "Noto Sans", "DejaVu Sans"),
+}
+
+# Families whose metrics the layout constants in widget.py and panel.py were
+# actually measured against. Anything else renders, but the fit of "100%" inside
+# the ring is unverified - see the note at the top of widget.py.
+MEASURED = frozenset({"Segoe UI Variable Display"})
+
+_family: str | None = None
+
+
+def family() -> str:
+    """This platform's UI font family, resolved once.
+
+    `exactMatch` rather than a name check: Qt happily hands back a substitute
+    for a family it does not have, and measuring the wrong font is worse than
+    knowing the preferred one is missing.
+    """
+    global _family
+    if _family is None:
+        for candidate in CANDIDATES.get(sys.platform, CANDIDATES["linux"]):
+            if QFont(candidate).exactMatch():
+                _family = candidate
+                break
+        else:
+            # The desktop's own UI font, which on Linux is the honest default.
+            _family = QFontDatabase.systemFont(QFontDatabase.SystemFont.GeneralFont).family()
+    return _family
+
 
 def font(size: int, weight: QFont.Weight = QFont.Weight.Normal) -> QFont:
-    """Segoe UI at `size` points, with tabular figures.
+    """The platform UI font at `size` points, with tabular figures.
 
     Without `tnum` the digit 1 is narrower than the rest and the per-second
     countdown jitters as it re-renders.
     """
-    f = QFont("Segoe UI Variable Display", size)
+    f = QFont(family(), size)
     f.setStyleStrategy(QFont.StyleStrategy.PreferAntialias)
     f.setWeight(weight)
-    if not f.exactMatch():
-        f.setFamily("Segoe UI")
     f.setFeature(QFont.Tag("tnum"), 1)
     return f
 

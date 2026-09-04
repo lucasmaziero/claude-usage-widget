@@ -63,6 +63,8 @@ STRINGS: dict[str, dict[str, str]] = {
         "time.now": "now",
         # errors, all user facing
         "error.no_credentials": "{path} not found: run `claude` once to sign in",
+        "error.no_keychain": ("no Claude Code token in the login keychain: "
+                              "run `claude` once to sign in"),
         "error.unreadable": "could not read {path}: {reason}",
         "error.no_token": "credentials without accessToken: sign in to Claude Code again",
         "error.unauthorized": "token refused (401): run `claude` to refresh it",
@@ -118,6 +120,8 @@ STRINGS: dict[str, dict[str, str]] = {
         "time.now": "agora",
         # errors, all user facing
         "error.no_credentials": "{path} não existe: faça login com `claude` uma vez",
+        "error.no_keychain": ("sem token do Claude Code no chaveiro: "
+                              "faça login com `claude` uma vez"),
         "error.unreadable": "não consegui ler {path}: {reason}",
         "error.no_token": "credenciais sem accessToken: refaça o login do Claude Code",
         "error.unauthorized": "token recusado (401): rode `claude` para renovar",
@@ -137,7 +141,7 @@ _current: str | None = None
 
 
 def system_language() -> str:
-    """What Windows is set to, narrowed to what this app speaks.
+    """What the system is set to, narrowed to what this app speaks.
 
     Imported lazily so the pure-stdlib modules that raise user-facing errors do
     not pull Qt in at import time.

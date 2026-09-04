@@ -1,33 +1,31 @@
 """Application wiring: tray icon, widget, panel and the collection cycle."""
 from __future__ import annotations
 
-import contextlib
 import os
 import sys
 import time
-import winreg
-from pathlib import Path
 
 from PySide6.QtCore import QObject, QPointF, QRectF, Qt, QTimer
-from PySide6.QtGui import QAction, QActionGroup, QFont, QIcon, QPainter, QPixmap
+from PySide6.QtGui import QAction, QActionGroup, QColor, QFont, QIcon, QPainter, QPixmap
 from PySide6.QtNetwork import QLocalServer, QLocalSocket
 from PySide6.QtWidgets import QApplication, QMenu, QSystemTrayIcon
 
-from . import i18n, paint, theme
+from . import autostart, i18n, paint, paths, theme
 from .i18n import t
 from .panel import Panel
 from .poller import Poller, Snapshot
 from .settings import Settings
 from .widget import FloatingWidget
 
-APP_ID = "ClaudeUsageWidget"
+APP_ID = autostart.APP_ID
+PERSONALIZE_KEY = r"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize"
 DEBUG = bool(os.environ.get("CLAUDE_USAGE_DEBUG"))
-RUN_KEY = r"Software\Microsoft\Windows\CurrentVersion\Run"
 TICK_MS = 1000              # reset countdowns advance between polls
-# The shell asks for the small-icon metric times the display scale, so 20px at
-# 125% becomes a request for 25. Without those in-between sizes Qt hands over a
-# larger pixmap and Windows shrinks it, which is exactly what smeared the icon.
-TRAY_SIZES = (16, 20, 24, 25, 30, 32, 40, 48)
+# The Windows shell asks for the small-icon metric times the display scale, so
+# 20px at 125% becomes a request for 25. Without those in-between sizes Qt hands
+# over a larger pixmap and Windows shrinks it, which is what smeared the icon.
+# macOS asks for 22pt at 1x and 2x, and Linux panels pick from the same set.
+TRAY_SIZES = (16, 20, 22, 24, 25, 30, 32, 40, 44, 48)
 POLL_CHOICES = (30, 60, 120, 300, 900)
 
 
@@ -47,7 +45,41 @@ def _fit_in_square(label: str, side: float) -> int:
     return 5
 
 
-def tray_pixmap(snap: Snapshot | None, size: int = TRAY_SIZES[-1]) -> QPixmap:
+def tray_surface_is_light() -> bool:
+    """Whether the surface behind the tray icon is light.
+
+    Not the same question as the app theme. Windows keeps two settings, and the
+    one that governs the taskbar is SystemUsesLightTheme; Qt's colorScheme()
+    reports the other one (AppsUseLightTheme), so a light-apps/dark-taskbar
+    setup would come back inverted. Everywhere else the two are one setting and
+    Qt's answer is the right one.
+    """
+    if paths.WINDOWS:
+        import winreg
+        try:
+            with winreg.OpenKey(winreg.HKEY_CURRENT_USER, PERSONALIZE_KEY) as key:
+                return bool(winreg.QueryValueEx(key, "SystemUsesLightTheme")[0])
+        except OSError:
+            return False              # the taskbar's default, and the old behaviour
+    hints = QApplication.styleHints()
+    scheme = getattr(hints, "colorScheme", lambda: Qt.ColorScheme.Dark)()
+    return scheme == Qt.ColorScheme.Light
+
+
+def tray_ink() -> QColor:
+    """Digit color for the tray, legible on whatever it is sitting on.
+
+    Unlike the widget, the tray icon sits on a surface this app does not paint:
+    the Windows taskbar, the macOS menu bar, a Linux panel. Each inverts with
+    the system theme, and the near-white the widget uses disappears on the light
+    one. The ring keeps its usage color either way - that is the signal, and it
+    reads on both.
+    """
+    return theme.INK_LIGHT if tray_surface_is_light() else theme.TEXT
+
+
+def tray_pixmap(snap: Snapshot | None, size: int = TRAY_SIZES[-1],
+                ink: QColor | None = None) -> QPixmap:
     """The 5h ring with the number inside, drawn for one exact icon size.
 
     The ring is kept thin and pushed to the edge, and the number is fitted to
@@ -55,6 +87,7 @@ def tray_pixmap(snap: Snapshot | None, size: int = TRAY_SIZES[-1]) -> QPixmap:
     what a strict reading would ask for, but at tray sizes it costs five point
     sizes - digits have empty corners, so the square is the honest bound.
     """
+    ink = ink or theme.TEXT
     pm = QPixmap(size, size)
     pm.fill(Qt.GlobalColor.transparent)
     p = QPainter(pm)
@@ -65,12 +98,14 @@ def tray_pixmap(snap: Snapshot | None, size: int = TRAY_SIZES[-1]) -> QPixmap:
     pct = snap.usage.h5 if live else 0.0
     radius = size * 0.45
     thickness = max(size * 0.09, 1.6)
+    idle = QColor(ink)
+    idle.setAlpha(80)                    # a track, not a reading
     paint.ring(p, QPointF(size / 2, size / 2), radius, thickness, pct,
-               color=None if live else theme.TRACK)
+               color=None if live else idle)
 
     label = f"{pct:.0f}" if live else "-"
     inner_side = size - thickness * 2 - 2
-    paint.text(p, QRectF(0, 0, size, size), label, theme.TEXT,
+    paint.text(p, QRectF(0, 0, size, size), label, ink,
                _fit_in_square(label, inner_side), QFont.Weight.DemiBold,
                Qt.AlignmentFlag.AlignCenter)
     p.end()
@@ -84,36 +119,10 @@ def tray_icon(snap: Snapshot | None) -> QIcon:
     digits; drawing each size means the 16px icon is laid out for 16px.
     """
     icon = QIcon()
+    ink = tray_ink()
     for size in TRAY_SIZES:
-        icon.addPixmap(tray_pixmap(snap, size))
+        icon.addPixmap(tray_pixmap(snap, size, ink))
     return icon
-
-
-def autostart_enabled() -> bool:
-    try:
-        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, RUN_KEY) as key:
-            winreg.QueryValueEx(key, APP_ID)
-        return True
-    except OSError:
-        return False
-
-
-def set_autostart(enabled: bool) -> None:
-    """Register this venv's pythonw.exe, so no console flashes at logon."""
-    try:
-        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, RUN_KEY, 0, winreg.KEY_SET_VALUE) as key:
-            if not enabled:
-                with contextlib.suppress(FileNotFoundError):
-                    winreg.DeleteValue(key, APP_ID)
-                return
-            exe = Path(sys.executable)
-            pythonw = exe.with_name("pythonw.exe")
-            target = pythonw if pythonw.exists() else exe
-            cmd = (f'"{target}" -m claude_usage' if target.name.startswith("python")
-                   else f'"{target}"')       # a frozen build launches itself
-            winreg.SetValueEx(key, APP_ID, 0, winreg.REG_SZ, cmd)
-    except OSError:
-        pass
 
 
 class App(QObject):
@@ -148,12 +157,21 @@ class App(QObject):
         self.poller.updated.connect(self.on_update)
         self.poller.busy.connect(self.widget.set_busy)
 
-        if self.settings["widget_visible"]:
+        # Without a tray the widget is the only way to reach the menu, so a
+        # stored "hidden" would leave the app running with no way to drive or
+        # quit it. GNOME ships no tray unless an AppIndicator extension is on.
+        if self.settings["widget_visible"] or not QSystemTrayIcon.isSystemTrayAvailable():
             self.widget.show()
 
         self.tick = QTimer(self)
         self.tick.timeout.connect(self._tick)
         self.tick.start(TICK_MS)
+
+        # The tray icon is drawn against the system's surface, so it has to be
+        # redrawn when the user switches between the light and dark themes.
+        hints = qapp.styleHints()
+        if hasattr(hints, "colorSchemeChanged"):
+            hints.colorSchemeChanged.connect(lambda _scheme: self._repaint_tray())
 
         self.poller.start()
         qapp.aboutToQuit.connect(self._shutdown)
@@ -193,7 +211,7 @@ class App(QObject):
                       self.settings["language"], self._set_language)
 
         self.menu.addSeparator()
-        self.act_autostart = self._check(t("menu.autostart"), autostart_enabled(),
+        self.act_autostart = self._check(t("menu.autostart"), autostart.enabled(),
                                          self._toggle_autostart)
         self.menu.addSeparator()
         act_quit = QAction(t("menu.quit"), self.menu)
@@ -269,8 +287,8 @@ class App(QObject):
         self.settings.save()
 
     def _toggle_autostart(self, on: bool) -> None:
-        set_autostart(on)
-        self.act_autostart.setChecked(autostart_enabled())
+        autostart.set_enabled(on)
+        self.act_autostart.setChecked(autostart.enabled())
 
     def _set_interval(self, seconds: int) -> None:
         self.settings["poll_sec"] = seconds
@@ -301,6 +319,9 @@ class App(QObject):
             self.tray.setToolTip(t("widget.tooltip_error",
                                    error=snap.error or t("widget.no_data")))
 
+    def _repaint_tray(self) -> None:
+        self.tray.setIcon(tray_icon(self.snap))
+
     def _tick(self) -> None:
         if self.widget.isVisible():
             self.widget.update()
@@ -327,7 +348,25 @@ def _already_running() -> bool:
     return False
 
 
+def prefer_x11() -> None:
+    """Steer a Linux Wayland session onto XWayland, before Qt reads the choice.
+
+    Wayland gives a window no say in its own position: `move()` is silently
+    ignored, and a widget that cannot be parked where the user left it is a
+    different product. XWayland has no such rule.
+
+    Only when the user has not picked a plugin themselves, and only when an X
+    server is actually reachable - forcing xcb without one would stop the app
+    from starting at all.
+    """
+    if not paths.LINUX or os.environ.get("QT_QPA_PLATFORM"):
+        return
+    if os.environ.get("WAYLAND_DISPLAY") and os.environ.get("DISPLAY"):
+        os.environ["QT_QPA_PLATFORM"] = "xcb"
+
+
 def main() -> int:
+    prefer_x11()                 # must precede the QApplication
     QApplication.setAttribute(Qt.ApplicationAttribute.AA_DontShowIconsInMenus, False)
     qapp = QApplication(sys.argv)
     qapp.setApplicationName("Claude Usage Widget")

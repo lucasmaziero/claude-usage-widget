@@ -6,6 +6,10 @@ resets, and the second row covers the weekly window.
 
 Frameless, always on top, kept off the taskbar (Qt.Tool) and dragged with the
 left button. A click without a drag opens the panel.
+
+The saved position is honoured everywhere except a Wayland session, where the
+protocol gives a window no say in where it is placed; `app.prefer_x11` steers
+Linux onto XWayland for that reason.
 """
 from __future__ import annotations
 
@@ -73,6 +77,10 @@ class FloatingWidget(QWidget):
             | Qt.WindowType.Tool                 # keeps it out of the taskbar
             | Qt.WindowType.NoDropShadowWindowHint
         )
+        # macOS hides tool windows whenever the app is deactivated, which for a
+        # widget whose whole job is to be visible while you work in something
+        # else means it is never on screen. A no-op on the other platforms.
+        self.setAttribute(Qt.WidgetAttribute.WA_MacAlwaysShowToolWindow)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         self.setMouseTracking(True)
         self.setWindowTitle("Claude Usage")
