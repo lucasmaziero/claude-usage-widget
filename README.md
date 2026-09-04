@@ -259,11 +259,38 @@ Segoe UI. Two consequences:
 
 - `tools/preview.py` deliberately does **not** use offscreen: in that mode every glyph is a box.
 
-That gate is stricter than "did we get a font". The geometry constants in `widget.py` - ring radius,
-column widths, the point sizes that make `100%` fit inside the gauge - were derived from the metrics
-of one family, and `paint.MEASURED` records which. On macOS and Linux the app resolves its own UI
-font (`paint.CANDIDATES`) and those tests skip, because the numbers have not been measured there
-yet. Doing that measurement, and adding the family to `MEASURED`, is the remaining piece of the port.
+That gate is stricter than "did we get a font". The geometry constants in `widget.py` were derived
+from one family's metrics, and `paint.MEASURED` records which families have since been checked.
+
+```powershell
+uv run python tools/measure_font.py                     # whatever the app resolved
+uv run python tools/measure_font.py "Noto Sans"         # an installed family
+uv run python tools/measure_font.py path\to\Inter.ttf    # a file, nothing installed
+```
+
+It runs the same twelve checks the tests do and prints the numbers. A font file is loaded into that
+process only, through `QFontDatabase`, so measuring a face does not mean installing it.
+
+What that turned up:
+
+| Family | Result |
+| --- | --- |
+| Segoe UI Variable Display | all twelve fit; the face the design was drawn against |
+| Noto Sans | all twelve fit |
+| Ubuntu | all twelve fit |
+| Cantarell | `56min` overruns its row by 0.1px and is elided to fit |
+| Inter | two rows overrun; the widest ran nearly 2px past |
+
+Two changes came out of it. The gauge number now **sizes itself**: it starts at the point size the
+design uses and steps down until it clears the stroke, so it shrinks a point instead of crossing the
+ring. On Segoe UI nothing moves, because nothing had to. And the Linux entry in `paint.CANDIDATES`
+is gone: it led with Inter, which no desktop ships and which measures worst of the lot, so it was
+overriding the user's own configured font with a poorer fit. Linux now uses what the desktop is set
+to, which is what `QFontDatabase` was already reporting.
+
+Rows still elide rather than collide when a face runs wide, which is the correct answer to text that
+genuinely does not fit - but it is a truncation, so a family only joins `MEASURED` when nothing
+truncates. macOS remains unmeasured: SF Pro is not distributed in a form this can load.
 
 The platform layer itself is testable from anywhere: `paths`, `autostart` and the macOS keychain
 branch of `credentials` read module-level flags that the tests pin, so `test_paths.py` and
@@ -304,6 +331,7 @@ by side is how the wrong file gets shipped.
 | `installer/claude-usage.iss` | Inno Setup: per-user install, shortcuts, autostart, uninstaller |
 | `installer/entry.py` | Frozen entry point (`__main__.py` uses a relative import) |
 | `tools/gen_icon.py` | `.ico`, `.iconset` or a hicolor tree, chosen by the output path |
+| `tools/measure_font.py` | Runs the layout's geometry checks against any font |
 
 Packaging decisions:
 

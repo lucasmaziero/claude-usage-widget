@@ -6,7 +6,6 @@ error, busy, compact).
 """
 from __future__ import annotations
 
-import math
 import time
 
 import pytest
@@ -23,11 +22,10 @@ from claude_usage.widget import (
     LABEL_W,
     ORBIT_R,
     ORBIT_T,
-    RING_R,
-    RING_T,
-    RING_TEXT_PT,
-    RING_TEXT_PT_WIDE,
+    RING_TEXT_MIN,
     FloatingWidget,
+    ring_text_fits,
+    ring_text_pt,
 )
 
 
@@ -102,18 +100,12 @@ def test_ring_number_stays_clear_of_the_stroke(qapp, real_fonts, pct):
     sign fits: at the old size "38%" ran 1.4px past the stroke and "100%" 6px.
     """
     number = f"{pct:.0f}"
-    size, unit_size = RING_TEXT_PT_WIDE if len(number) > 2 else RING_TEXT_PT
+    size, unit_size = ring_text_pt(number)
 
-    # Mirrors paint.numeric: the block is centered counting 35% of the unit.
-    w_num = paint.width(number, size, QFont.Weight.DemiBold)
-    w_unit = paint.width("%", unit_size)
-    left = -(w_num + w_unit * 0.35) / 2
-    right = left + w_num + 1 + w_unit
-
-    inner_radius = RING_R - RING_T / 2
-    clearance = math.sqrt(inner_radius**2 - (size * 0.95 / 2) ** 2)
-    assert right < clearance - 2      # 2px of air, not merely "does not overlap"
-    assert -left < clearance - 2
+    # The widget picks the size by asking this, so the assertion is that the
+    # answer it settled on genuinely fits - not that a fixed size happens to.
+    assert ring_text_fits(number, size, unit_size)
+    assert size >= RING_TEXT_MIN
 
 
 def test_widget_paints_while_busy(qapp, settings):

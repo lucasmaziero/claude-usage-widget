@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import math
+import os
 import sys
 
 from PySide6.QtCore import QPointF, QRectF, Qt
@@ -17,22 +18,44 @@ from PySide6.QtGui import (
 
 from . import theme
 
-# The UI font of each platform, best cut first. Only the families a desktop
-# ships by default are listed: a widget must never depend on the user having
-# installed something. Linux has no such family, so the list is a courtesy and
-# the real answer comes from whatever the desktop is configured to use.
+# The UI font of each platform, best cut first. Only families a desktop ships
+# by default are listed: a widget must never depend on the user having
+# installed something.
+#
+# Linux is deliberately absent. It has no single default, every desktop already
+# publishes the one it wants through QFontDatabase, and the list that used to
+# be here led with Inter - which no desktop ships and which tools/measure_font.py
+# shows to be the worst fit of the lot, running "38%" past the ring's stroke and
+# truncating two of the four rows. Preferring it over the user's own configured
+# font was wrong twice over.
 CANDIDATES = {
     "win32": ("Segoe UI Variable Display", "Segoe UI"),
     "darwin": ("SF Pro Display", "SF Pro Text", "Helvetica Neue"),
-    "linux": ("Inter", "Cantarell", "Ubuntu", "Noto Sans", "DejaVu Sans"),
 }
 
-# Families whose metrics the layout constants in widget.py and panel.py were
-# actually measured against. Anything else renders, but the fit of "100%" inside
-# the ring is unverified - see the note at the top of widget.py.
-MEASURED = frozenset({"Segoe UI Variable Display"})
+# Families the layout has actually been measured in, with
+# tools/measure_font.py. Anything else still renders - the gauge number sizes
+# itself to whatever it is given - but the rows may truncate rather than fit,
+# so the geometry tests skip instead of asserting.
+MEASURED = frozenset({
+    "Segoe UI Variable Display",     # the face the design was drawn against
+    "Noto Sans",                     # all twelve checks fit
+    "Ubuntu",                        # fits once the gauge number sizes itself
+})
+
+FONT_ENV = "CLAUDE_USAGE_FONT"      # pin a family; also how the layout is measured
 
 _family: str | None = None
+
+
+def set_family(name: str | None) -> None:
+    """Pin the family, or pass None to resolve it again.
+
+    For tools/measure_font.py and the tests. The app never calls this: a user
+    who wants a different face sets CLAUDE_USAGE_FONT.
+    """
+    global _family
+    _family = name
 
 
 def family() -> str:
@@ -44,13 +67,19 @@ def family() -> str:
     """
     global _family
     if _family is None:
-        for candidate in CANDIDATES.get(sys.platform, CANDIDATES["linux"]):
-            if QFont(candidate).exactMatch():
-                _family = candidate
-                break
+        forced = os.environ.get(FONT_ENV, "").strip()
+        if forced:
+            _family = forced
         else:
-            # The desktop's own UI font, which on Linux is the honest default.
-            _family = QFontDatabase.systemFont(QFontDatabase.SystemFont.GeneralFont).family()
+            for candidate in CANDIDATES.get(sys.platform, ()):
+                if QFont(candidate).exactMatch():
+                    _family = candidate
+                    break
+            else:
+                # What the desktop itself is set to, which on Linux is the only
+                # honest answer and everywhere else is a reasonable fallback.
+                _family = QFontDatabase.systemFont(
+                    QFontDatabase.SystemFont.GeneralFont).family()
     return _family
 
 

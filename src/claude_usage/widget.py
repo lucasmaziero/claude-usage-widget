@@ -13,6 +13,7 @@ Linux onto XWayland for that reason.
 """
 from __future__ import annotations
 
+import math
 import time
 
 from PySide6.QtCore import QPoint, QPointF, QRectF, Qt, QTimer, Signal
@@ -44,11 +45,46 @@ ROW_H = 24
 LABEL_W = 36            # label, then air, the dot, air again
 RING_TEXT_PT = (15, 8)  # number, unit: up to two digits
 RING_TEXT_PT_WIDE = (12, 7)   # 100 needs a step down to keep its air
+RING_TEXT_MIN = 9       # below this the number stops being readable at a glance
 MASCOT_PT = 11          # badge in the top-right corner
 ICON_HIT = 26           # hit area of each button in the right column
 ICON_R = 4.6            # circular arrow, sized against the menu dots
 SPIN_MS = 40                            # spinner frame while a fetch is in flight
 SPIN_STEP = 9.0                         # degrees per frame
+
+
+def ring_text_fits(number: str, size: int, unit_size: int) -> bool:
+    """Whether "38%" at these sizes clears the ring's inner edge, with air.
+
+    Measured at the text's own height rather than at the circle's equator: a
+    circle is narrower where the digits actually are. Shared with the tests and
+    with tools/measure_font.py so all three ask the same question.
+    """
+    w_num = paint.width(number, size, QFont.Weight.DemiBold)
+    w_unit = paint.width("%", unit_size)
+    half = (w_num + w_unit * 0.35) / 2
+    right = -half + w_num + 1 + w_unit
+
+    inner = RING_R - RING_T / 2
+    clearance = math.sqrt(inner**2 - (size * 0.95 / 2) ** 2) - 2
+    return right < clearance and half < clearance
+
+
+def ring_text_pt(number: str) -> tuple[int, int]:
+    """Point sizes for the gauge number, stepped down until it clears the stroke
+    it sits inside.
+
+    The table is what the design was drawn against and is only ever made smaller
+    here, so on a font where it already fits nothing moves. Other faces set the
+    same digits wider - Inter runs "38%" almost two pixels past the stroke at
+    these sizes - and the choice there is between digits crossing the gauge and
+    digits a point smaller. Smaller wins.
+    """
+    size, unit = RING_TEXT_PT_WIDE if len(number) > 2 else RING_TEXT_PT
+    while size > RING_TEXT_MIN and not ring_text_fits(number, size, unit):
+        size -= 1
+        unit = max(unit - 1, 6)
+    return size, unit
 
 
 class FloatingWidget(QWidget):
@@ -221,7 +257,7 @@ class FloatingWidget(QWidget):
         paint.ring(p, center, RING_R, RING_T, h5, color=None if live else theme.TRACK)
         if live:
             number = f"{h5:.0f}"
-            size, unit_size = RING_TEXT_PT_WIDE if len(number) > 2 else RING_TEXT_PT
+            size, unit_size = ring_text_pt(number)
             paint.numeric(p, center, number, "%", theme.TEXT, size, unit_size,
                           unit_color=theme.MUTED)
             return

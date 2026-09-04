@@ -257,12 +257,40 @@ larga que a Segoe UI. Duas consequências:
 
 - o `tools/preview.py` **não** usa offscreen de propósito: nesse modo todo glifo vira quadradinho.
 
-Essa trava é mais rígida que "conseguimos uma fonte". As constantes de geometria do `widget.py` —
-raio do anel, largura das colunas, os corpos que fazem `100%` caber dentro do medidor — saíram das
-métricas de uma família só, e o `paint.MEASURED` registra qual. No macOS e no Linux o app resolve a
-própria fonte de interface (`paint.CANDIDATES`) e esses testes se pulam, porque os números ainda não
-foram medidos lá. Fazer essa medição, e acrescentar a família ao `MEASURED`, é a peça que falta do
-port.
+Essa trava é mais rígida que "conseguimos uma fonte". As constantes de geometria do `widget.py`
+saíram das métricas de uma família só, e o `paint.MEASURED` registra quais famílias já foram
+conferidas desde então.
+
+```powershell
+uv run python tools/measure_font.py                     # o que o app resolveu
+uv run python tools/measure_font.py "Noto Sans"         # uma família instalada
+uv run python tools/measure_font.py caminho\Inter.ttf    # um arquivo, sem instalar
+```
+
+Ela roda as mesmas doze verificações dos testes e imprime os números. O arquivo de fonte é carregado
+só naquele processo, via `QFontDatabase`, então medir uma face não significa instalá-la.
+
+O que isso revelou:
+
+| Família | Resultado |
+| --- | --- |
+| Segoe UI Variable Display | as doze cabem; é a face contra a qual o desenho foi feito |
+| Noto Sans | as doze cabem |
+| Ubuntu | as doze cabem |
+| Cantarell | `56min` estoura a linha por 0,1px e é elidido |
+| Inter | duas linhas estouram; a mais larga passava quase 2px |
+
+Saíram duas mudanças daí. O número do medidor agora **se dimensiona**: parte do corpo que o desenho
+usa e desce até liberar o traço, então ele encolhe um ponto em vez de atravessar o anel. No Segoe UI
+nada se move, porque nada precisava. E a entrada de Linux do `paint.CANDIDATES` sumiu: ela começava
+pela Inter, que nenhum desktop distribui e que mede pior de todas, ou seja, estava sobrepondo a
+fonte configurada pelo usuário por uma que encaixa pior. O Linux agora usa o que o desktop define,
+que é o que o `QFontDatabase` já reportava.
+
+As linhas continuam elidindo em vez de colidir quando uma face corre larga, que é a resposta certa
+para texto que realmente não cabe — mas é truncamento, então uma família só entra no `MEASURED`
+quando nada trunca. O macOS segue sem medição: a SF Pro não é distribuída num formato que isso
+consiga carregar.
 
 A camada de plataforma em si dá para testar de qualquer lugar: `paths`, `autostart` e o ramo do
 chaveiro em `credentials` leem flags de módulo que os testes fixam, então o `test_paths.py` e o
@@ -303,6 +331,7 @@ a lado é como se distribui o arquivo errado por engano.
 | `installer/claude-usage.iss` | Inno Setup: instalação por usuário, atalhos, autostart, desinstalador |
 | `installer/entry.py` | Entry point do build congelado (o `__main__.py` usa import relativo) |
 | `tools/gen_icon.py` | `.ico`, `.iconset` ou árvore hicolor, escolhidos pelo caminho de saída |
+| `tools/measure_font.py` | Roda as verificações de geometria do layout em qualquer fonte |
 
 Decisões do empacotamento:
 
