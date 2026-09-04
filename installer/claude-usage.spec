@@ -1,22 +1,36 @@
-# PyInstaller build definition. Driven by installer/build.ps1.
+# PyInstaller build definition, shared by all three platforms.
+# Driven by installer/build.ps1 (Windows) or installer/build.sh (macOS, Linux).
 #
-# onedir, not onefile: onefile unpacks the whole Qt runtime into %TEMP% on every
-# launch, which is a second or two of startup for an app that lives in the tray
-# and is expected to start with Windows. The installer hides the folder anyway.
+# onedir, not onefile: onefile unpacks the whole Qt runtime into a temp folder
+# on every launch, which is a second or two of startup for an app that lives in
+# the tray and is expected to start with the session. The installer, the .app
+# bundle and the AppImage all hide the folder anyway.
+import sys
 import tomllib
 from pathlib import Path
 
 ROOT = Path(SPECPATH).parent  # noqa: F821 - SPECPATH is injected by PyInstaller
 
-# The version lives in pyproject.toml and nowhere else; the resource embedded in
-# the .exe (Properties > Details) is rendered from it at build time.
-VERSION = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))["project"]["version"]
-FIELDS = tuple(int(part) for part in VERSION.split(".")) + (0,) * (4 - VERSION.count(".") - 1)
+WINDOWS = sys.platform == "win32"
+MACOS = sys.platform == "darwin"
+LINUX = not WINDOWS and not MACOS
 
-VERSION_FILE = ROOT / "build" / "work" / "version.txt"
-VERSION_FILE.parent.mkdir(parents=True, exist_ok=True)
-VERSION_FILE.write_text(
-    f"""VSVersionInfo(
+BUNDLE_ID = "com.lucasmaziero.claude-usage-widget"
+
+# The version lives in pyproject.toml and nowhere else.
+VERSION = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))["project"]["version"]
+
+# ------------------------------------------------------------------ Windows
+# The resource embedded in the .exe (Properties > Details) is rendered from the
+# version at build time. Windows only: the other two carry their metadata in the
+# bundle plist and the .desktop entry.
+version_file = None
+if WINDOWS:
+    FIELDS = tuple(int(part) for part in VERSION.split(".")) + (0,) * (4 - VERSION.count(".") - 1)
+    version_file = ROOT / "build" / "work" / "version.txt"
+    version_file.parent.mkdir(parents=True, exist_ok=True)
+    version_file.write_text(
+        f"""VSVersionInfo(
   ffi=FixedFileInfo(filevers={FIELDS}, prodvers={FIELDS}, mask=0x3f, flags=0x0,
                     OS=0x40004, fileType=0x1, subtype=0x0, date=(0, 0)),
   kids=[
@@ -33,8 +47,15 @@ VERSION_FILE.write_text(
   ]
 )
 """,
-    encoding="utf-8",
-)
+        encoding="utf-8",
+    )
+
+# The icon is built first by the build script, in the format the platform wants.
+ICON = {
+    "win32": ROOT / "installer" / "claude-usage.ico",
+    "darwin": ROOT / "build" / "ClaudeUsage.icns",
+}.get(sys.platform)
+icon = str(ICON) if ICON and ICON.exists() else None       # Linux has none to embed
 
 # PySide6-Essentials ships far more than this app touches. It only needs
 # QtCore/QtGui/QtWidgets (UI), QtNetwork (single-instance socket) and QtSvg
@@ -43,7 +64,7 @@ EXCLUDES = [
     "PySide6.Qt3DAnimation", "PySide6.Qt3DCore", "PySide6.Qt3DExtras",
     "PySide6.Qt3DInput", "PySide6.Qt3DLogic", "PySide6.Qt3DRender",
     "PySide6.QtBluetooth", "PySide6.QtCharts", "PySide6.QtConcurrent",
-    "PySide6.QtDataVisualization", "PySide6.QtDBus", "PySide6.QtDesigner",
+    "PySide6.QtDataVisualization", "PySide6.QtDesigner",
     "PySide6.QtHelp", "PySide6.QtMultimedia", "PySide6.QtMultimediaWidgets",
     "PySide6.QtNetworkAuth", "PySide6.QtNfc", "PySide6.QtOpenGL",
     "PySide6.QtOpenGLWidgets", "PySide6.QtPdf", "PySide6.QtPdfWidgets",
@@ -58,6 +79,12 @@ EXCLUDES = [
     # stdlib corners the app never reaches
     "tkinter", "unittest", "pydoc", "doctest", "test", "distutils",
 ]
+
+# QtDBus is dead weight on Windows and macOS, but on Linux it is how a tray icon
+# exists at all: StatusNotifierItem is a D-Bus protocol, and dropping it leaves
+# the app with no tray on every desktop that implements one.
+if not LINUX:
+    EXCLUDES.append("PySide6.QtDBus")
 
 a = Analysis(  # noqa: F821
     [str(ROOT / "installer" / "entry.py")],
@@ -82,8 +109,8 @@ exe = EXE(  # noqa: F821
     exclude_binaries=True,
     name="ClaudeUsage",
     console=False,                       # tray app: a console window would be noise
-    icon=str(ROOT / "installer" / "claude-usage.ico"),
-    version=str(VERSION_FILE),
+    icon=icon,
+    version=str(version_file) if version_file else None,
     debug=False,
     strip=False,
     upx=False,
@@ -97,3 +124,25 @@ coll = COLLECT(  # noqa: F821
     upx=False,
     name="ClaudeUsage",
 )
+
+if MACOS:
+    # LSUIElement is the whole reason this is a bundle rather than a bare
+    # executable: it is what keeps a tray app out of the Dock and out of the
+    # app switcher. There is no runtime equivalent reachable from Qt.
+    app = BUNDLE(  # noqa: F821
+        coll,
+        name="Claude Usage Widget.app",
+        icon=icon,
+        bundle_identifier=BUNDLE_ID,
+        version=VERSION,
+        info_plist={
+            "LSUIElement": True,
+            "NSHighResolutionCapable": True,
+            "LSMinimumSystemVersion": "11.0",
+            "CFBundleShortVersionString": VERSION,
+            "CFBundleVersion": VERSION,
+            "CFBundleName": "Claude Usage Widget",
+            "CFBundleDisplayName": "Claude Usage Widget",
+            "NSHumanReadableCopyright": "Copyright (c) 2026 Lucas Maziero. MIT License.",
+        },
+    )

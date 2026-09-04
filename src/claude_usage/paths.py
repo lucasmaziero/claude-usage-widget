@@ -25,6 +25,13 @@ APP_DIR = "ClaudeUsageWidget"          # Windows and macOS convention
 XDG_DIR = "claude-usage-widget"        # Linux convention
 
 
+def os_name() -> str:
+    """What to call this platform in front of the user, e.g. "Start with macOS"."""
+    if WINDOWS:
+        return "Windows"
+    return "macOS" if MACOS else "Linux"
+
+
 def home() -> Path:
     return Path(os.path.expanduser("~"))
 

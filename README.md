@@ -9,6 +9,7 @@
 [![CI](https://github.com/lucasmaziero/claude-usage-widget/actions/workflows/ci.yml/badge.svg)](https://github.com/lucasmaziero/claude-usage-widget/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/lucasmaziero/claude-usage-widget)](https://github.com/lucasmaziero/claude-usage-widget/releases/latest)
 [![Python](https://img.shields.io/badge/python-3.11+-3776ab)](https://www.python.org)
+[![Platform](https://img.shields.io/badge/platform-Windows%20%C2%B7%20macOS%20%C2%B7%20Linux-6e7681)](#installation)
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
 <img src="docs/widget.png" width="440" alt="Floating widget showing 41% of the 5-hour window">
@@ -32,32 +33,78 @@ request it can, a `POST /v1/messages` with `max_tokens: 1`, purely to read them:
 
 Two things follow from the app running on the **same machine** as Claude Code:
 
-- **Nothing to configure.** The OAuth token comes from `%USERPROFILE%\.claude\.credentials.json`,
-  the same file Claude Code uses, re-read on every cycle. When Claude Code refreshes the token, the
-  widget follows on its own.
+- **Nothing to configure.** The OAuth token comes from wherever Claude Code itself put it, re-read
+  on every cycle: `~/.claude/.credentials.json` on Windows and Linux, the login keychain on macOS.
+  When Claude Code refreshes the token, the widget follows on its own.
 - **Real token counts.** The headers only carry percentages; the absolute numbers exist only in the
   transcripts under `~/.claude/projects/**/*.jsonl`, which are read straight off the disk.
 
 ## Installation
 
-Download `ClaudeUsage-Setup-<version>.exe` from the [releases page][releases] and double-click it.
-The install is **per user**, into `%LOCALAPPDATA%\Programs\Claude Usage Widget`. No admin, no UAC
-prompt. The wizard offers a desktop shortcut and starting with Windows, both optional. It uninstalls
-from **Installed apps** like any program, asking first whether to remove your preferences too.
+Every download is on the [releases page][releases], each with a SHA-256 beside it. All three builds
+are unsigned, so each OS objects in its own way; the notes below say how to get past it.
 
-The installer is not signed, so SmartScreen warns about an "unknown publisher" on the first
-download. A SHA-256 is published beside each release for anyone who wants to verify the file.
-
-Requires Claude Code to have been signed in on the machine (`claude` once). Without it the widget
-shows `.credentials.json not found: run claude once to sign in`.
+Whichever you pick, Claude Code has to have been signed in on the machine (`claude` once). Without
+it the widget shows `run claude once to sign in` instead of a number.
 
 [releases]: https://github.com/lucasmaziero/claude-usage-widget/releases/latest
 
+### Windows
+
+`ClaudeUsage-Setup-<version>.exe`, double-clicked. The install is **per user**, into
+`%LOCALAPPDATA%\Programs\Claude Usage Widget`. No admin, no UAC prompt. The wizard offers a desktop
+shortcut and starting with Windows, both optional. It uninstalls from **Installed apps** like any
+program, asking first whether to remove your preferences too.
+
+Unsigned, so SmartScreen warns about an "unknown publisher" on the first download.
+
+### macOS
+
+`ClaudeUsage-<version>-arm64.dmg` for Apple Silicon, `-x86_64` for Intel. Open it and drag the app
+to Applications. It has no Dock icon by design (`LSUIElement`): the menu bar and the floating widget
+are the whole interface.
+
+The bundle is signed ad-hoc rather than with a Developer ID, so Gatekeeper refuses it on the first
+launch. Right-click the app and choose **Open**, which offers the override a double-click does not,
+or:
+
+```bash
+xattr -dr com.apple.quarantine "/Applications/Claude Usage Widget.app"
+```
+
+The first poll opens a keychain prompt, because on macOS the token lives there rather than in a
+file. Choose **Always Allow** and it is never asked again.
+
+### Linux
+
+`ClaudeUsage-<version>-x86_64.AppImage`, marked executable and run:
+
+```bash
+chmod +x ClaudeUsage-*.AppImage
+./ClaudeUsage-*.AppImage
+```
+
+Two desktop caveats worth knowing before filing a bug:
+
+- **GNOME ships no system tray.** The icon appears only with an AppIndicator extension installed.
+  Without one the app notices and keeps the floating widget on screen, since its right-click menu
+  carries the same commands.
+- **Wayland forbids a window from placing itself**, so a saved position cannot be restored. Where an
+  X server is reachable the app asks for XWayland and the position works normally; setting
+  `QT_QPA_PLATFORM` yourself always wins.
+
 ### From source
+
+Works on all three, and is the only route on an architecture without a build.
+
+```bash
+uv sync
+uv run claude-usage       # ./run.sh detaches it from the terminal
+```
 
 ```powershell
 uv sync
-uv run claude-usage      # or .\run.bat, which starts it without a console window
+uv run claude-usage       # or .\run.bat, which starts it without a console window
 ```
 
 ## Usage
@@ -104,13 +151,21 @@ tooltip carries both windows.
 | Lock position | Ignores dragging |
 | Interval | 30 s to 15 min, 2 min by default |
 | Language | Automatic, Português, English |
-| Start with Windows | Writes the entry under `HKCU\...\CurrentVersion\Run` |
+| Start with *&lt;your OS&gt;* | Named after the system it is running on; one mechanism each, see below |
 
-Preferences live in `%APPDATA%\ClaudeUsageWidget\settings.json`.
+Autostart and preferences are the only things that differ per platform:
+
+| | Autostart | Preferences |
+| --- | --- | --- |
+| Windows | `HKCU\...\CurrentVersion\Run` | `%APPDATA%\ClaudeUsageWidget\settings.json` |
+| macOS | `~/Library/LaunchAgents/com.lucasmaziero.claude-usage-widget.plist` | `~/Library/Application Support/ClaudeUsageWidget/settings.json` |
+| Linux | `~/.config/autostart/claude-usage-widget.desktop` | `$XDG_CONFIG_HOME/claude-usage-widget/settings.json` |
+
+All three are per user: none needs admin, and none writes outside your home directory.
 
 ### Language
 
-The interface ships in English and Portuguese. It follows the Windows language by default; the
+The interface ships in English and Portuguese. It follows the system language by default; the
 **Language** menu offers Automatic, Português and English, and the choice is saved. Switching
 applies immediately, with no restart.
 
@@ -131,7 +186,9 @@ installer/          packaging           tools/       icon and preview generators
 
 | Module | Role |
 | --- | --- |
-| `credentials.py` | Reads Claude Code's OAuth token |
+| `paths.py` | Where each OS keeps the credentials, transcripts and preferences |
+| `credentials.py` | Reads Claude Code's OAuth token, from a file or the macOS keychain |
+| `autostart.py` | Start with the session: Run key, LaunchAgent or .desktop entry |
 | `api.py` | Usage and incidents; `parse()` split out so the contract tests without a network |
 | `tokens.py` | Sums the window's tokens from local transcripts |
 | `poller.py` | Collection thread, history, burn rate and projection |
@@ -147,7 +204,7 @@ installer/          packaging           tools/       icon and preview generators
 
 ```powershell
 uv sync                                           # creates the .venv with the dev group
-uv run pytest                                     # 81 tests, no network, no windows
+uv run pytest                                     # 114 tests, no network, no windows
 uv run ruff check .                               # lint (rules in pyproject.toml)
 uv run python tools/preview.py docs/preview.png   # offline render of both surfaces
 $env:CLAUDE_USAGE_DEBUG=1; uv run claude-usage    # prints every cycle to the console
@@ -157,15 +214,38 @@ The render tests use `QT_QPA_PLATFORM=offscreen` (see `tests/conftest.py`) and c
 painting path runs without raising, across the states the UI actually reaches: no data, live, error,
 collecting and compact.
 
-In that mode Qt swaps the Windows font database for a stub whose fallback runs about 1.8x wider than
+In that mode Qt swaps the real font database for a stub whose fallback runs about 1.8x wider than
 Segoe UI. Two consequences:
 
-- tests that measure text geometry are gated on the real font (the `real_fonts` fixture) and skip
+- tests that measure text geometry are gated on the font (the `real_fonts` fixture) and skip
   themselves when headless. To run the whole suite against the real thing:
-  `$env:QT_QPA_PLATFORM = "windows"; uv run pytest`;
+
+  ```powershell
+  $env:QT_QPA_PLATFORM = "windows"; uv run pytest     # Windows
+  ```
+
+  ```bash
+  QT_QPA_PLATFORM=cocoa uv run pytest                 # macOS
+  QT_QPA_PLATFORM=xcb uv run pytest                   # Linux
+  ```
+
 - `tools/preview.py` deliberately does **not** use offscreen: in that mode every glyph is a box.
 
-## Building the installer
+That gate is stricter than "did we get a font". The geometry constants in `widget.py` - ring radius,
+column widths, the point sizes that make `100%` fit inside the gauge - were derived from the metrics
+of one family, and `paint.MEASURED` records which. On macOS and Linux the app resolves its own UI
+font (`paint.CANDIDATES`) and those tests skip, because the numbers have not been measured there
+yet. Doing that measurement, and adding the family to `MEASURED`, is the remaining piece of the port.
+
+The platform layer itself is testable from anywhere: `paths`, `autostart` and the macOS keychain
+branch of `credentials` read module-level flags that the tests pin, so `test_paths.py` and
+`test_autostart.py` exercise the macOS and Linux code paths on a Windows machine and vice versa.
+Only the Windows registry backend is left to a machine that has a registry.
+
+## Building
+
+Each platform builds its own artifact, on itself. There is no cross-compilation here: PyInstaller
+freezes the interpreter and the Qt libraries of the machine it runs on.
 
 ```powershell
 .\installer\build.ps1                  # icon -> PyInstaller -> Inno Setup
@@ -173,28 +253,47 @@ Segoe UI. Two consequences:
 .\installer\build.ps1 -Clean           # wipes build\ first, caches included
 ```
 
-Needs Inno Setup (`winget install JRSoftware.InnoSetup`); the script looks for both the per-user and
-the machine-wide install. Output lands in `build\ClaudeUsage-Setup-<version>.exe`, about 21 MB
-compressed from 70 MB installed. Every run leaves **exactly one** setup in the folder, the one just
-built: keeping old versions side by side is how the wrong `.exe` gets shipped.
+```bash
+./installer/build.sh                   # icon -> PyInstaller -> .dmg or .AppImage
+./installer/build.sh --skip-package    # only the portable folder in build/dist
+./installer/build.sh --clean           # wipes build/ first, caches included
+```
+
+| Platform | Needs | Produces |
+| --- | --- | --- |
+| Windows | Inno Setup (`winget install JRSoftware.InnoSetup`) | `build/ClaudeUsage-Setup-<version>.exe`, ~21 MB from 70 MB installed |
+| macOS | Xcode command line tools, for `iconutil`, `codesign` and `hdiutil` | `build/ClaudeUsage-<version>-<arch>.dmg` |
+| Linux | `appimagetool`, downloaded on first run | `build/ClaudeUsage-<version>-<arch>.AppImage` |
+
+Every run leaves **exactly one** artifact in `build/`, the one just built: keeping old versions side
+by side is how the wrong file gets shipped.
 
 | File | Role |
 | --- | --- |
-| `installer/build.ps1` | Runs the three steps and reads the version from `pyproject.toml` |
-| `installer/claude-usage.spec` | PyInstaller: onedir, no console, icon and version resource |
+| `installer/build.ps1` | Windows: the three steps, version read from `pyproject.toml` |
+| `installer/build.sh` | macOS and Linux: the same three steps, plus signing and packaging |
+| `installer/claude-usage.spec` | PyInstaller, shared: onedir, no console, per-OS icon and metadata |
 | `installer/claude-usage.iss` | Inno Setup: per-user install, shortcuts, autostart, uninstaller |
 | `installer/entry.py` | Frozen entry point (`__main__.py` uses a relative import) |
-| `tools/gen_icon.py` | Builds the multi-resolution `.ico` from the mascot SVG |
+| `tools/gen_icon.py` | `.ico`, `.iconset` or a hicolor tree, chosen by the output path |
 
-Three packaging decisions:
+Packaging decisions:
 
-- **onedir, not onefile.** `--onefile` unpacks the whole Qt runtime into `%TEMP%` on every launch,
-  a second or two for an app that lives in the tray and starts with Windows.
+- **onedir, not onefile.** `--onefile` unpacks the whole Qt runtime into a temp folder on every
+  launch, a second or two for an app that lives in the tray and starts with the session.
 - **`opengl32sw.dll` left out.** That is 20 MB of Mesa's software OpenGL, a fifth of the bundle, and
   this interface is painted by Qt's raster engine alone.
-- **The `.ico` is assembled by hand.** Importing Pillow into a PySide6 process loads a second
-  libpng/zlib and Qt's PNG encoder dies with an access violation; writing the ICO container is 40
-  lines and removes that whole class of DLL clash.
+- **`QtDBus` is excluded everywhere except Linux**, where it is not optional: a tray icon on a modern
+  Linux desktop *is* a D-Bus StatusNotifierItem, and dropping the module leaves the app trayless.
+- **The `.ico` is assembled by hand, the `.icns` is not.** Importing Pillow into a PySide6 process
+  loads a second libpng/zlib and Qt's PNG encoder dies with an access violation, so the ICO container
+  is written directly - 40 lines, and no DLL clash. For macOS the generator emits an `.iconset`
+  directory and lets Apple's `iconutil` build the container: a hand-rolled one that macOS quietly
+  refuses is the worse trade.
+- **Ad-hoc signing on macOS is not cosmetic.** An unsigned arm64 binary is killed on launch, so
+  `build.sh` always signs; `CODESIGN_ID` swaps in a real Developer ID where there is one.
+- **The AppImage is built on the oldest supported Ubuntu image**, because it inherits the glibc of
+  the machine that built it and a newer one would refuse to start on older distributions.
 
 ## Implementation notes
 
@@ -211,6 +310,24 @@ Things that cost time and that the code alone does not explain:
 - **Text is measured, never placed at a fixed offset.** `56min` is half again as wide as `2h13` and
   used to run into the clock column. Digits use `tnum` (`QFont.setFeature`), otherwise `1` is
   narrower than the other digits and the countdown jitters every second.
+
+And four that only appear once the app leaves Windows:
+
+- **macOS hides `Qt.Tool` windows whenever the application is deactivated.** For a widget whose
+  entire job is to stay visible while you work in something else, that means it is never on screen.
+  `WA_MacAlwaysShowToolWindow` undoes it, and is a no-op on the other two.
+- **Wayland gives a window no say in its own position.** `move()` is silently ignored, so the saved
+  position - most of the point of a floating widget - cannot be restored. There is no fix inside the
+  protocol; `app.prefer_x11()` asks for XWayland when an X server is reachable, and steps aside if
+  the user set `QT_QPA_PLATFORM` themselves.
+- **The tray icon is drawn on a surface this app does not paint.** Near-white digits vanish on a
+  light taskbar, menu bar or panel, so the ink follows the system theme. On Windows that means
+  reading `SystemUsesLightTheme` from the registry rather than Qt's `colorScheme()`: Qt reports the
+  *app* theme, and a light-apps/dark-taskbar setup would come back inverted.
+- **On macOS the token is not in a file.** Claude Code puts it in the login keychain, so
+  `credentials.py` shells out to `security find-generic-password` and keeps the file as a fallback.
+  Every way that call can come up empty - not signed in, access denied, no binary at all - falls
+  through to the file and produces a single error for both.
 
 ## Cost
 

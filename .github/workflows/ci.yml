@@ -2,17 +2,42 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, dev]
   pull_request:
   workflow_dispatch:
 
 jobs:
   check:
-    # winreg, the tray and the DPI handling are Win32: nothing to test elsewhere.
-    runs-on: windows-latest
+    strategy:
+      fail-fast: false          # one platform breaking must not hide the others
+      matrix:
+        include:
+          # Windows is the only runner with a real display, so it is the only
+          # one where the font-dependent render tests actually execute. The
+          # other two would resolve the offscreen plugin's stub font database
+          # and skip themselves - see the real_fonts fixture.
+          - os: windows-latest
+            qt_platform: ''
+          - os: macos-latest
+            qt_platform: offscreen
+          - os: ubuntu-latest
+            qt_platform: offscreen
+
+    runs-on: ${{ matrix.os }}
+    env:
+      QT_QPA_PLATFORM: ${{ matrix.qt_platform }}
 
     steps:
       - uses: actions/checkout@v7
+
+      # PySide6's wheels link against these; without them even `import PySide6`
+      # fails on a bare runner, offscreen or not.
+      - name: Qt runtime libraries
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends \
+            libegl1 libgl1 libfontconfig1 libdbus-1-3 libxkbcommon0
 
       # setup-uv stopped publishing floating major tags at v7; @v10 is nothing.
       - uses: astral-sh/setup-uv@v10.0.1
@@ -21,7 +46,11 @@ jobs:
 
       - run: uv sync --frozen
 
-      - run: uv run ruff check .
+      # Style is platform-independent; running it three times would only mean
+      # reading the same failure three times.
+      - name: Lint
+        if: runner.os == 'Linux'
+        run: uv run ruff check .
 
       # Run logs need a token to read; annotations do not. Failing summaries go
       # into one so a red build can be diagnosed from the commit page.
@@ -32,6 +61,6 @@ jobs:
           Write-Host $out
           if ($LASTEXITCODE -ne 0) {
             $tail = (($out -split "`n" | Select-Object -Last 30) -join '%0A')
-            Write-Host "::error title=pytest::$tail"
+            Write-Host "::error title=pytest (${{ matrix.os }})::$tail"
             exit 1
           }

@@ -1,16 +1,20 @@
 [project]
 name = "claude-usage-widget"
 version = "1.0.0"
-description = "Floating desktop widget showing Claude Code rate-limit usage on Windows"
+description = "Floating desktop widget showing Claude Code rate-limit usage"
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }
 authors = [{ name = "Lucas Maziero" }]
-keywords = ["claude", "claude-code", "rate-limit", "widget", "tray", "windows"]
+keywords = ["claude", "claude-code", "rate-limit", "widget", "tray", "desktop"]
 classifiers = [
     "Environment :: Win32 (MS Windows)",
+    "Environment :: MacOS X",
+    "Environment :: X11 Applications :: Qt",
     "Intended Audience :: Developers",
     "Operating System :: Microsoft :: Windows",
+    "Operating System :: MacOS :: MacOS X",
+    "Operating System :: POSIX :: Linux",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",

@@ -1,6 +1,15 @@
 """Build the application icon from the same Clawd SVG the UI uses.
 
-    uv run python tools/gen_icon.py [installer/claude-usage.ico]
+Three platforms want three shapes, so the output format follows the path:
+
+    uv run python tools/gen_icon.py installer/claude-usage.ico     # Windows
+    uv run python tools/gen_icon.py build/ClaudeUsage.iconset      # macOS
+    uv run python tools/gen_icon.py build/icons                    # Linux
+
+The .iconset is a directory in the layout `iconutil -c icns` expects; the macOS
+build script runs that conversion, because Apple's own tool is the only way to
+be sure the container is one macOS will accept. A bare directory gets the
+freedesktop icon sizes for a hicolor theme.
 
 Every size is rendered from the vector rather than downsampled from one large
 bitmap: at 16 and 20 pixels the mascot is a handful of blocks, and resampling
@@ -26,6 +35,19 @@ from claude_usage import brand, theme
 # Sizes Windows actually asks for: tray, taskbar, list views, tiles.
 SIZES = (16, 20, 24, 32, 40, 48, 64, 128, 256)
 PNG_FROM = 64          # below this Windows is happiest with a plain DIB
+
+# What iconutil reads. The @2x entries are a larger render under a smaller
+# name, which is exactly what a Retina display asks for.
+ICONSET = (
+    ("icon_16x16.png", 16), ("icon_16x16@2x.png", 32),
+    ("icon_32x32.png", 32), ("icon_32x32@2x.png", 64),
+    ("icon_128x128.png", 128), ("icon_128x128@2x.png", 256),
+    ("icon_256x256.png", 256), ("icon_256x256@2x.png", 512),
+    ("icon_512x512.png", 512), ("icon_512x512@2x.png", 1024),
+)
+
+# freedesktop hicolor sizes: panels, launchers, alt-tab, settings.
+HICOLOR = (16, 22, 24, 32, 48, 64, 128, 256, 512)
 
 
 def render(size: int) -> QImage:
@@ -85,14 +107,43 @@ def build(sizes: tuple[int, ...]) -> bytes:
     return header + entries + b"".join(payloads)
 
 
+def write_ico(out: Path) -> str:
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_bytes(build(SIZES))
+    return f"{out} ({', '.join(str(s) for s in SIZES)}), {out.stat().st_size / 1024:.1f} kB"
+
+
+def write_iconset(out: Path) -> str:
+    out.mkdir(parents=True, exist_ok=True)
+    for name, size in ICONSET:
+        (out / name).write_bytes(as_png(render(size)))
+    return f"{out} ({len(ICONSET)} entries for iconutil)"
+
+
+def write_hicolor(out: Path) -> str:
+    """One PNG per size, plus the 256 copied to the flat name AppImage wants at
+    the root of an AppDir."""
+    for size in HICOLOR:
+        target = out / f"{size}x{size}" / "apps"
+        target.mkdir(parents=True, exist_ok=True)
+        (target / "claude-usage-widget.png").write_bytes(as_png(render(size)))
+    (out / "claude-usage-widget.png").write_bytes(as_png(render(256)))
+    return f"{out} ({', '.join(str(s) for s in HICOLOR)})"
+
+
 def main() -> None:
     out = Path(sys.argv[1] if len(sys.argv) > 1 else "installer/claude-usage.ico")
-    out.parent.mkdir(parents=True, exist_ok=True)
     app = QApplication(sys.argv[:1])          # the local reference keeps Qt alive
 
-    out.write_bytes(build(SIZES))
+    if out.suffix == ".ico":
+        note = write_ico(out)
+    elif out.suffix == ".iconset":
+        note = write_iconset(out)
+    else:
+        note = write_hicolor(out)
+
     del app
-    print(f"{out} ({', '.join(str(s) for s in SIZES)}), {out.stat().st_size / 1024:.1f} kB")
+    print(note)
 
 
 if __name__ == "__main__":

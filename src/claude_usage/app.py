@@ -211,8 +211,8 @@ class App(QObject):
                       self.settings["language"], self._set_language)
 
         self.menu.addSeparator()
-        self.act_autostart = self._check(t("menu.autostart"), autostart.enabled(),
-                                         self._toggle_autostart)
+        self.act_autostart = self._check(t("menu.autostart", os=paths.os_name()),
+                                         autostart.enabled(), self._toggle_autostart)
         self.menu.addSeparator()
         act_quit = QAction(t("menu.quit"), self.menu)
         act_quit.triggered.connect(self.qapp.quit)
