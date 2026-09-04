@@ -14,6 +14,8 @@
 
 <img src="docs/widget.png" width="440" alt="Widget flutuante mostrando 41% da janela de 5 horas">
 
+<a href="https://lucasmaziero.github.io/claude-usage-widget/"><b>lucasmaziero.github.io/claude-usage-widget</b></a>
+
 </div>
 
 ---

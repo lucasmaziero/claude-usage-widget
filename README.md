@@ -14,6 +14,8 @@
 
 <img src="docs/widget.png" width="440" alt="Floating widget showing 41% of the 5-hour window">
 
+<a href="https://lucasmaziero.github.io/claude-usage-widget/"><b>lucasmaziero.github.io/claude-usage-widget</b></a>
+
 </div>
 
 ---

@@ -1,6 +1,7 @@
-"""Render the widget and the panel to a PNG contact sheet.
+"""Render the widget and the panel to PNGs.
 
-    uv run python tools/preview.py [out.png]
+    uv run python tools/preview.py [out.png]        # contact sheet, every state
+    uv run python tools/preview.py --shots docs     # one file each, at 2x
 
 No network and no visible windows: the widgets are painted without ever being
 shown. It runs on the normal Windows platform plugin on purpose: under
@@ -17,7 +18,7 @@ from PySide6.QtCore import QRectF, Qt
 from PySide6.QtGui import QColor, QImage, QPainter
 from PySide6.QtWidgets import QApplication
 
-from claude_usage import api, paint, theme, tokens
+from claude_usage import api, i18n, paint, theme, tokens
 from claude_usage.panel import Panel
 from claude_usage.poller import Snapshot
 from claude_usage.settings import Settings
@@ -44,18 +45,69 @@ def snapshot(h5: float, d7: float, incidents: tuple[str, ...] = (), error: str =
     )
 
 
-def render(widget) -> QImage:
-    """Paint a widget offscreen at 1x, transparent background."""
-    img = QImage(widget.width(), widget.height(), QImage.Format.Format_ARGB32)
-    img.setDevicePixelRatio(1.0)
+def render(widget, scale: float = 1.0) -> QImage:
+    """Paint a widget offscreen, transparent background.
+
+    `scale` above 1 renders for a high-density display: the pixmap is that many
+    times larger and Qt lays the drawing out at the bigger size rather than
+    scaling a small one up, so hairlines and text stay sharp.
+    """
+    img = QImage(round(widget.width() * scale), round(widget.height() * scale),
+                 QImage.Format.Format_ARGB32)
+    img.setDevicePixelRatio(scale)
     img.fill(Qt.GlobalColor.transparent)
     widget.render(img)
     return img
 
 
+def shots(out_dir: Path, scale: float = 2.0) -> None:
+    """The two surfaces as separate files, for the web page.
+
+    Transparent rather than on a backdrop: the page's own background is the
+    same near-black the app is designed against, so the card sits on it
+    directly instead of on a rectangle of a slightly different colour.
+
+    The widget carries no translatable text - "5h", "2h13", "16:33" read the
+    same in both - so it is rendered once. The panel is rendered per language,
+    because the page offers the same switch the app does and a Portuguese
+    screenshot under English copy would be the one thing on the page that
+    contradicts itself.
+    """
+    settings = Settings()
+    settings["compact"] = False
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    before = i18n.language()
+    try:
+        i18n.set_language("en")
+        widget = FloatingWidget(settings)
+        widget.set_snapshot(snapshot(37, 8))
+        img = render(widget, scale)
+        img.save(str(out_dir / "shot-widget.png"))
+        print(f"{out_dir / 'shot-widget.png'} ({img.width()}x{img.height()} @{scale:g}x)")
+
+        for code in ("en", "pt_BR"):
+            i18n.set_language(code)
+            panel = Panel(settings)
+            panel.set_snapshot(
+                snapshot(71, 34, ("Elevated error rates on the API",)), "~1h40")
+            img = render(panel, scale)
+            name = f"shot-panel-{code.split('_')[0]}.png"
+            img.save(str(out_dir / name))
+            print(f"{out_dir / name} ({img.width()}x{img.height()} @{scale:g}x)")
+    finally:
+        i18n.set_language(before)
+
+
 def main() -> None:
-    out = Path(sys.argv[1] if len(sys.argv) > 1 else "preview.png")
     QApplication(sys.argv[:1])
+
+    if "--shots" in sys.argv:
+        where = sys.argv[sys.argv.index("--shots") + 1:]
+        shots(Path(where[0]) if where else Path("docs"))
+        return
+
+    out = Path(sys.argv[1] if len(sys.argv) > 1 else "preview.png")
     settings = Settings()
 
     states = (

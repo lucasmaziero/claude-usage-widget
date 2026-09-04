@@ -1,0 +1,416 @@
+/* Claude Usage Widget - landing page.
+ *
+ * Every colour here is lifted from src/claude_usage/theme.py. A near-black
+ * page with one warm accent is a tired look when it is picked for a landing
+ * page; it is not picked here. It is what the product already ships, and the
+ * point of the page is that the running widget in the hero sits on the same
+ * surface it was designed against, with nothing recoloured to match. */
+
+:root {
+  /* theme.py */
+  --bg:       #0F0F12;
+  --surface:  #1A1A20;
+  --surface2: #24242C;
+  --track:    #26262E;
+  --border:   #30303A;
+  --text:     #F2F0EC;
+  --muted:    #8C8C98;
+  --faint:    #5C5C68;
+  --accent:   #D97757;   /* Claude coral */
+  --ok:       #4ADE80;
+  --warn:     #FBBF24;
+  --bad:      #F87171;
+
+  /* IBM Plex Mono for anything that reads as instrumentation: the headline,
+   * every number, the header names. It is the vernacular of the subject -
+   * terminals, response headers, token counts - and its digits are strong
+   * enough to carry a display size. Instrument Sans keeps prose out of its
+   * way without falling back on the ubiquitous grotesque. */
+  --mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --sans: "Instrument Sans", -apple-system, "Segoe UI", system-ui, sans-serif;
+  /* What the app itself draws with. The replica uses it so the widget on the
+   * page is typographically the same object as the one on your desktop. */
+  --ui: "Segoe UI Variable Display", "Segoe UI", -apple-system, "SF Pro Display",
+        Inter, Cantarell, Ubuntu, system-ui, sans-serif;
+
+  --edge: clamp(20px, 5vw, 64px);
+  --u: 1.55px;              /* one widget pixel; the replica scales off this */
+  color-scheme: dark;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after { animation-duration: .001ms !important; transition-duration: .001ms !important; }
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 400 16px/1.6 var(--sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+a { color: inherit; }
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: 3px;
+}
+
+.skip {
+  position: absolute; left: -9999px;
+  background: var(--accent); color: #17171C;
+  padding: 10px 16px; border-radius: 8px; font-weight: 600;
+}
+.skip:focus { left: var(--edge); top: 12px; z-index: 10; }
+
+/* ─────────────────────────────────────────────────────────── header */
+.bar {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 16px;
+  padding: 22px var(--edge);
+  max-width: 1160px; margin: 0 auto;
+}
+
+.mark {
+  display: inline-flex; align-items: center; gap: 10px;
+  text-decoration: none;
+  font: 600 15px/1 var(--mono);
+  letter-spacing: -.01em;
+}
+.clawd { width: 22px; height: 22px; fill: var(--accent); flex: none; }
+
+.bar nav { display: flex; align-items: center; gap: 10px; }
+
+.lang {
+  display: inline-flex;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.lang button {
+  appearance: none; border: 0; cursor: pointer;
+  background: transparent; color: var(--faint);
+  font: 500 11px/1 var(--mono); letter-spacing: .06em;
+  padding: 8px 11px;
+  transition: color .15s, background .15s;
+}
+.lang button:hover { color: var(--muted); }
+.lang button[aria-pressed="true"] { background: var(--surface2); color: var(--text); }
+
+.ghost {
+  text-decoration: none;
+  font: 500 13px/1 var(--sans);
+  color: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 9px 15px;
+  transition: color .15s, border-color .15s;
+}
+.ghost:hover { color: var(--text); border-color: var(--faint); }
+
+/* ────────────────────────────────────────────────────────── sections */
+main { max-width: 1160px; margin: 0 auto; padding: 0 var(--edge); }
+
+.band {
+  padding: clamp(64px, 9vw, 116px) 0;
+  border-top: 1px solid var(--border);
+}
+
+.eyebrow {
+  margin: 0 0 18px;
+  font: 500 11.5px/1 var(--mono);
+  letter-spacing: .1em;
+  color: var(--faint);
+  word-break: break-all;
+}
+
+h1 {
+  margin: 0 0 20px;
+  font: 600 clamp(1.95rem, 4.3vw, 2.85rem)/1.1 var(--mono);
+  letter-spacing: -.035em;
+  text-wrap: balance;
+}
+
+h2 {
+  margin: 0 0 18px;
+  font: 500 clamp(1.5rem, 3.1vw, 2.05rem)/1.18 var(--mono);
+  letter-spacing: -.03em;
+  max-width: 22ch;
+  text-wrap: balance;
+}
+
+h3 {
+  margin: 0 0 8px;
+  font: 500 1rem/1.3 var(--mono);
+  letter-spacing: -.01em;
+}
+
+.lede { margin: 0; color: var(--muted); font-size: 1.06rem; max-width: 62ch; }
+.lede.narrow { max-width: 56ch; }
+.fine { margin: 22px 0 0; color: var(--faint); font-size: .875rem; max-width: 56ch; }
+
+/* ───────────────────────────────────────────────────────────── hero */
+.hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+  gap: clamp(36px, 6vw, 72px);
+  align-items: center;
+  padding: clamp(24px, 4vw, 48px) 0 clamp(56px, 7vw, 88px);
+}
+
+.hero .lede { font-size: 1.12rem; }
+
+.actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 30px; }
+
+.btn {
+  display: inline-flex; align-items: center; gap: 9px;
+  text-decoration: none;
+  font: 500 .95rem/1 var(--sans);
+  padding: 14px 22px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  color: var(--text);
+  transition: background .15s, border-color .15s, transform .15s;
+}
+.btn:hover { background: var(--surface); border-color: var(--faint); }
+.btn:active { transform: translateY(1px); }
+
+.btn.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #17171C;
+  font-weight: 600;
+}
+.btn.primary:hover { background: #E4886B; border-color: #E4886B; }
+
+.ver { font: 500 .8rem/1 var(--mono); opacity: .72; }
+.ver:empty { display: none; }
+
+.hero-demo { display: flex; flex-direction: column; align-items: center; gap: 18px; }
+.caption {
+  margin: 0; text-align: center;
+  color: var(--faint); font-size: .8rem; max-width: 34ch;
+}
+
+/* ────────────────────────────────────── the replica of the widget
+ * Sizes are the app's own, in --u units, so the proportions are the real
+ * ones rather than an approximation redrawn by eye. */
+.widget {
+  display: flex; align-items: center;
+  width: calc(246 * var(--u));
+  height: calc(78 * var(--u));
+  padding: 0 calc(8 * var(--u)) 0 calc(4 * var(--u));
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: calc(14 * var(--u));
+  box-shadow: 0 calc(3 * var(--u)) calc(22 * var(--u)) rgba(0, 0, 0, .55);
+  font-family: var(--ui);
+  font-variant-numeric: tabular-nums;
+  user-select: none;
+}
+
+.gauge { position: relative; width: calc(78 * var(--u)); height: calc(78 * var(--u)); flex: none; }
+.gauge svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+.gauge circle { fill: none; }
+.ring-track { stroke: var(--track); stroke-width: 6; }
+.ring { stroke: var(--ok); stroke-width: 6; stroke-linecap: round; transition: stroke .6s linear; }
+.orbit-track { stroke: var(--track); stroke-width: 2.5; opacity: .55; }
+.orbit { stroke: var(--faint); stroke-width: 2.5; stroke-linecap: round; }
+.widget.busy .orbit { stroke: var(--ok); }
+
+/* Two alignments at once: the pair is centred in the ring, and inside the
+ * pair the per cent sign sits on the number's baseline. One flex box cannot
+ * do both - `align-items: baseline` on a full-size box pins the line to the
+ * top - so the inner span carries the baseline and the outer one centres it. */
+.gauge-num {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  letter-spacing: -.02em;
+}
+.gauge-num span { display: flex; align-items: baseline; }
+.gauge-num b { font: 600 calc(19 * var(--u))/1 var(--ui); }
+.gauge-num i {
+  font: 500 calc(10 * var(--u))/1 var(--ui);
+  font-style: normal; color: var(--muted); margin-left: calc(1 * var(--u));
+}
+
+.rows {
+  flex: 1; min-width: 0;
+  margin-left: calc(4 * var(--u));
+  display: flex; flex-direction: column; gap: calc(6 * var(--u));
+}
+.row {
+  display: grid;
+  grid-template-columns: auto auto 1fr auto;
+  align-items: baseline;
+  gap: calc(6 * var(--u));
+}
+.row .key   { font: 500 calc(11 * var(--u))/1 var(--ui); color: var(--muted); }
+.row .sep   { font-size: calc(10 * var(--u)); color: var(--faint); }
+.row .val   { font: 600 calc(15 * var(--u))/1 var(--ui); justify-self: start; }
+.row .val.ok { color: var(--ok); font-size: calc(13 * var(--u)); }
+.row .clock { font: 400 calc(11 * var(--u))/1 var(--ui); color: var(--faint); }
+
+.tools {
+  width: calc(32 * var(--u)); flex: none;
+  height: 100%;
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: space-around;
+  padding: calc(10 * var(--u)) 0;
+  color: var(--faint);
+}
+.clawd.sm { width: calc(15 * var(--u)); height: calc(15 * var(--u)); }
+.tools .icon { width: calc(14 * var(--u)); height: calc(14 * var(--u)); }
+.tools .dots { fill: currentColor; }
+
+/* ─────────────────────────────────────────────────────── mechanism */
+.wire {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+  gap: clamp(20px, 3.5vw, 44px);
+  align-items: center;
+  margin-top: 40px;
+}
+
+.headers {
+  margin: 0;
+  overflow-x: auto;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px 22px;
+  font: 400 clamp(11px, 1.15vw, 12.5px)/1.85 var(--mono);
+}
+.headers code { white-space: pre; }
+.headers .dim { color: var(--faint); }
+.headers b { font-weight: 400; color: var(--muted); }
+.headers u { text-decoration: none; color: var(--accent); font-weight: 600; }
+
+.becomes { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; }
+.becomes li { display: flex; align-items: baseline; gap: 12px; color: var(--muted); font-size: .9rem; }
+.b-num {
+  flex: none; min-width: 4.5ch;
+  font: 600 1rem/1.2 var(--mono);
+  color: var(--text);
+  letter-spacing: -.02em;
+}
+.b-num.ok-t { color: var(--ok); }
+
+.pair {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: clamp(24px, 4vw, 56px);
+  margin-top: clamp(44px, 6vw, 72px);
+  padding-top: clamp(32px, 4vw, 48px);
+  border-top: 1px solid var(--border);
+}
+.pair p { margin: 0; color: var(--muted); font-size: .95rem; }
+
+/* ──────────────────────────────────────────────────────── surfaces */
+.shots {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: clamp(28px, 5vw, 60px);
+  align-items: start;
+  margin-top: 40px;
+}
+.shots figure { margin: 0; }
+/* Both at their true size, never scaled to match each other. The widget really
+ * is a third of the panel, and that difference is the section's whole point:
+ * one is a glance, the other is the whole story. The files are rendered at 2x,
+ * so half of their pixel width is 1:1. */
+.shots img { display: block; width: 100%; height: auto; }
+.shots .w img { max-width: 270px; }
+.shots .p img { max-width: 372px; }
+.shots figcaption { margin-top: 18px; color: var(--muted); font-size: .9rem; max-width: 42ch; }
+
+/* ─────────────────────────────────────────────────────── downloads */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(238px, 1fr));
+  gap: 14px;
+  margin-top: 40px;
+}
+
+.card {
+  display: flex; flex-direction: column;
+  text-decoration: none;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+  transition: border-color .15s, background .15s, transform .15s;
+}
+.card:hover { border-color: var(--accent); background: var(--surface2); transform: translateY(-2px); }
+
+.card .os {
+  display: flex; align-items: baseline; gap: 8px;
+  font: 600 1.02rem/1.2 var(--mono); letter-spacing: -.02em;
+}
+.card .os em { font: 400 .72rem/1 var(--sans); font-style: normal; color: var(--faint); }
+
+.card .file {
+  margin-top: 14px;
+  font: 400 .76rem/1.4 var(--mono);
+  color: var(--accent);
+  word-break: break-all;
+}
+
+.card .meta {
+  display: flex; justify-content: space-between; gap: 8px;
+  margin-top: 6px;
+  font: 400 .72rem/1 var(--mono);
+  color: var(--faint);
+}
+.card .size:empty::before { content: "—"; }
+
+.card .gotcha {
+  margin-top: 16px; padding-top: 14px;
+  border-top: 1px solid var(--border);
+  color: var(--muted); font-size: .82rem; line-height: 1.55;
+}
+
+.source { margin-top: clamp(44px, 6vw, 68px); }
+.source pre {
+  margin: 0;
+  overflow-x: auto;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 18px 20px;
+  font: 400 12.5px/1.8 var(--mono);
+  color: var(--muted);
+}
+
+/* ─────────────────────────────────────────────────────────── footer */
+footer {
+  max-width: 1160px; margin: 0 auto;
+  padding: 40px var(--edge) 64px;
+  border-top: 1px solid var(--border);
+  display: flex; flex-wrap: wrap; gap: 16px 32px;
+  align-items: baseline; justify-content: space-between;
+}
+footer div { display: flex; gap: 22px; }
+footer a { color: var(--muted); text-decoration: none; font-size: .875rem; }
+footer a:hover { color: var(--text); }
+footer p { margin: 0; color: var(--faint); font-size: .8rem; max-width: 46ch; }
+
+/* ─────────────────────────────────────────────────────── narrower */
+@media (max-width: 900px) {
+  .hero, .wire { grid-template-columns: 1fr; }
+  .hero { padding-bottom: 64px; }
+  .hero-demo { margin-top: 8px; }
+  h2 { max-width: none; }
+}
+
+@media (max-width: 460px) {
+  :root { --u: 1.15px; }
+  .bar { padding-top: 16px; padding-bottom: 16px; }
+  .mark span { display: none; }
+}

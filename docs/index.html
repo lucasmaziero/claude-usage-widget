@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Claude Usage Widget</title>
+<meta name="description" content="Your Claude Code limits, on a floating desktop widget. Windows, macOS and Linux.">
+
+<meta property="og:type" content="website">
+<meta property="og:title" content="Claude Usage Widget">
+<meta property="og:description" content="Your Claude Code limits, on a floating desktop widget. Windows, macOS and Linux.">
+<meta property="og:image" content="https://lucasmaziero.github.io/claude-usage-widget/preview.png">
+<meta property="og:url" content="https://lucasmaziero.github.io/claude-usage-widget/">
+<meta name="twitter:card" content="summary_large_image">
+
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Instrument+Sans:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<a class="skip" href="#downloads" data-i18n="skip">Skip to downloads</a>
+
+<header class="bar">
+  <a class="mark" href="#top" aria-label="Claude Usage Widget">
+    <svg class="clawd" viewBox="0 0 24 24" aria-hidden="true"><path fill-rule="evenodd" clip-rule="evenodd" d="M20.998 10.949H24v3.102h-3v3.028h-1.487V20H18v-2.921h-1.487V20H15v-2.921H9V20H7.488v-2.921H6V20H4.487v-2.921H3V14.05H0V10.95h3V5h17.998v5.949zM6 10.949h1.488V8.102H6v2.847zm10.51 0H18V8.102h-1.49v2.847z"/></svg>
+    <span>Claude Usage</span>
+  </a>
+  <nav>
+    <div class="lang" role="group" aria-label="Language">
+      <button type="button" data-lang="en" aria-pressed="true">EN</button>
+      <button type="button" data-lang="pt" aria-pressed="false">PT</button>
+    </div>
+    <a class="ghost" href="https://github.com/lucasmaziero/claude-usage-widget">GitHub</a>
+  </nav>
+</header>
+
+<main id="top">
+
+  <!-- ─────────────────────────────────────────────── hero -->
+  <section class="hero">
+    <div class="hero-copy">
+      <p class="eyebrow">windows · macos · linux</p>
+      <h1 data-i18n="hero.title">Your Claude Code limits, where you can see them.</h1>
+      <p class="lede" data-i18n="hero.lede">A floating widget that reads the rate-limit headers Claude Code already receives, and tells you how much of the five-hour window is gone before it stops you.</p>
+      <div class="actions">
+        <a class="btn primary" href="#downloads">
+          <span data-i18n="hero.cta">Download</span>
+          <span class="ver" id="hero-version"></span>
+        </a>
+        <a class="btn" href="https://github.com/lucasmaziero/claude-usage-widget" data-i18n="hero.source">Read the source</a>
+      </div>
+      <p class="fine" data-i18n="hero.fine">Free and MIT licensed. Nothing to configure: it reads the credentials Claude Code already wrote.</p>
+    </div>
+
+    <!-- the signature: the product itself, running -->
+    <div class="hero-demo">
+      <div class="widget" id="widget" role="img" aria-label="Floating widget showing 37% of the five-hour window">
+        <div class="gauge">
+          <svg viewBox="0 0 78 78" aria-hidden="true">
+            <circle class="orbit-track" cx="39" cy="39" r="33.5"/>
+            <circle class="orbit" id="orbit" cx="39" cy="39" r="33.5"/>
+            <circle class="ring-track" cx="39" cy="39" r="27"/>
+            <circle class="ring" id="ring" cx="39" cy="39" r="27"/>
+          </svg>
+          <div class="gauge-num"><span><b id="pct">37</b><i>%</i></span></div>
+        </div>
+
+        <div class="rows">
+          <div class="row">
+            <span class="key">5h</span><span class="sep">•</span>
+            <span class="val" id="h5-left">3h20</span>
+            <span class="clock" id="h5-clock">13:50</span>
+          </div>
+          <div class="row">
+            <span class="key">7d</span><span class="sep">•</span>
+            <span class="val ok" id="d7">8%</span>
+            <span class="clock" id="d7-left">1d05h</span>
+          </div>
+        </div>
+
+        <div class="tools">
+          <svg class="clawd sm" viewBox="0 0 24 24" aria-hidden="true"><path fill-rule="evenodd" clip-rule="evenodd" d="M20.998 10.949H24v3.102h-3v3.028h-1.487V20H18v-2.921h-1.487V20H15v-2.921H9V20H7.488v-2.921H6V20H4.487v-2.921H3V14.05H0V10.95h3V5h17.998v5.949zM6 10.949h1.488V8.102H6v2.847zm10.51 0H18V8.102h-1.49v2.847z"/></svg>
+          <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M13 8a5 5 0 1 1-1.6-3.7" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M13 2.6V5.4H10.2" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <svg class="icon dots" viewBox="0 0 16 16" aria-hidden="true"><circle cx="3" cy="8" r="1.4"/><circle cx="8" cy="8" r="1.4"/><circle cx="13" cy="8" r="1.4"/></svg>
+        </div>
+      </div>
+      <p class="caption" data-i18n="hero.caption">Running, not a screenshot. The collection interval is compressed so you can watch a cycle.</p>
+    </div>
+  </section>
+
+  <!-- ─────────────────────────────────────────── mechanism -->
+  <section class="band">
+    <p class="eyebrow">anthropic-ratelimit-unified-*</p>
+    <h2 data-i18n="how.title">The number was always in the response. Nobody was reading it.</h2>
+    <p class="lede narrow" data-i18n="how.lede">There is no usage endpoint for subscription accounts. Utilization rides along in the headers of any reply, so the widget sends the smallest request that exists — one output token — purely to read them.</p>
+
+    <div class="wire">
+      <pre class="headers" aria-label="HTTP response headers"><code><span class="dim">HTTP/1.1 200 OK</span>
+<span class="dim">content-type: application/json</span>
+<b>anthropic-ratelimit-unified-5h-utilization: </b><u>37</u>
+<b>anthropic-ratelimit-unified-5h-reset: </b><u>1757001000</u>
+<b>anthropic-ratelimit-unified-7d-utilization: </b><u>8</u>
+<b>anthropic-ratelimit-unified-status: </b><u>allowed</u></code></pre>
+
+      <ul class="becomes">
+        <li><span class="b-num">37%</span><span data-i18n="how.b1">of the five-hour window, on the gauge</span></li>
+        <li><span class="b-num">3h20</span><span data-i18n="how.b2">until it resets, counted down every second</span></li>
+        <li><span class="b-num">8%</span><span data-i18n="how.b3">of the weekly window, on the second row</span></li>
+        <li><span class="b-num ok-t">OK</span><span data-i18n="how.b4">the status chip, and which window binds first</span></li>
+      </ul>
+    </div>
+
+    <div class="pair">
+      <div>
+        <h3 data-i18n="how.c1t">Nothing to configure</h3>
+        <p data-i18n="how.c1b">The token comes from wherever Claude Code put it — a file on Windows and Linux, the login keychain on macOS — and is re-read every cycle. When Claude Code refreshes it, the widget follows on its own.</p>
+      </div>
+      <div>
+        <h3 data-i18n="how.c2t">Real token counts</h3>
+        <p data-i18n="how.c2b">The headers only carry percentages. The absolute numbers exist only in the transcripts on your disk, so those are read straight off it — no second account, no telemetry, nothing leaves the machine.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ──────────────────────────────────────────── surfaces -->
+  <section class="band">
+    <p class="eyebrow">two surfaces</p>
+    <h2 data-i18n="ui.title">A glance, and the whole story.</h2>
+    <div class="shots">
+      <figure class="w">
+        <img src="shot-widget.png" alt="The floating widget" width="540" height="204" loading="lazy">
+        <figcaption data-i18n="ui.cap1">No number appears twice. The ring says how much of the window is spent, the rows say how long is left. Drag it anywhere; the position is saved.</figcaption>
+      </figure>
+      <figure class="p">
+        <img id="shot-panel" src="shot-panel-en.png" alt="The expanded panel" width="744" height="716" loading="lazy">
+        <figcaption data-i18n="ui.cap2">Click for the panel: the five-hour window on its own card, the weekly one below, real token counts, and how long until you hit the ceiling at the current rate.</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <!-- ─────────────────────────────────────────── downloads -->
+  <section class="band" id="downloads">
+    <p class="eyebrow">releases</p>
+    <h2 data-i18n="dl.title">Pick your machine.</h2>
+    <p class="lede narrow" data-i18n="dl.lede">Every build is unsigned, so each system objects in its own way. The note under each one says how to get past it.</p>
+
+    <div class="grid" id="dl-grid">
+      <a class="card" data-slot="win" href="https://github.com/lucasmaziero/claude-usage-widget/releases/latest">
+        <span class="os">Windows</span>
+        <span class="file">ClaudeUsage.exe</span>
+        <span class="meta"><span class="size"></span><span class="arch">x64 · 10+</span></span>
+        <span class="gotcha" data-i18n="dl.win">Installs per user, no admin. SmartScreen warns about an unknown publisher — choose More info, then Run anyway.</span>
+      </a>
+      <a class="card" data-slot="arm64" href="https://github.com/lucasmaziero/claude-usage-widget/releases/latest">
+        <span class="os">macOS<em data-i18n="dl.silicon">Apple Silicon</em></span>
+        <span class="file">ClaudeUsage-arm64.dmg</span>
+        <span class="meta"><span class="size"></span><span class="arch">arm64 · 11+</span></span>
+        <span class="gotcha" data-i18n="dl.mac">Right-click the app and choose Open the first time. The first poll asks for keychain access, because that is where your token lives.</span>
+      </a>
+      <a class="card" data-slot="x86" href="https://github.com/lucasmaziero/claude-usage-widget/releases/latest">
+        <span class="os">macOS<em>Intel</em></span>
+        <span class="file">ClaudeUsage-x86_64.dmg</span>
+        <span class="meta"><span class="size"></span><span class="arch">x86_64 · 11+</span></span>
+        <span class="gotcha" data-i18n="dl.mac2">Same as above. Built separately because there is no universal binary for the Qt runtime this uses.</span>
+      </a>
+      <a class="card" data-slot="linux" href="https://github.com/lucasmaziero/claude-usage-widget/releases/latest">
+        <span class="os">Linux</span>
+        <span class="file">ClaudeUsage.AppImage</span>
+        <span class="meta"><span class="size"></span><span class="arch">x86_64</span></span>
+        <span class="gotcha" data-i18n="dl.linux">chmod +x and run. GNOME needs an AppIndicator extension for the tray; without one the widget stays on screen instead.</span>
+      </a>
+    </div>
+
+    <p class="fine" id="dl-note" data-i18n="dl.note">Requires Claude Code to have been signed in once on the same machine. A SHA-256 is published beside every file.</p>
+
+    <div class="source">
+      <p class="eyebrow" data-i18n="dl.source">or from source</p>
+      <pre><code>git clone https://github.com/lucasmaziero/claude-usage-widget
+cd claude-usage-widget
+uv sync
+uv run claude-usage</code></pre>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <div>
+    <a href="https://github.com/lucasmaziero/claude-usage-widget">Source</a>
+    <a href="https://github.com/lucasmaziero/claude-usage-widget/releases">Releases</a>
+    <a href="https://github.com/lucasmaziero/claude-usage-widget/blob/main/LICENSE">MIT</a>
+  </div>
+  <p data-i18n="foot.disclaimer">An independent project by Lucas Maziero. Not affiliated with, endorsed by, or supported by Anthropic.</p>
+</footer>
+
+<script src="app.js"></script>
+</body>
+</html>
