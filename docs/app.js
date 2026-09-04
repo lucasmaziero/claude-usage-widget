@@ -47,7 +47,7 @@ const STRINGS = {
     'dl.note': 'Requires Claude Code to have been signed in once on the same machine. A SHA-256 is published beside every file.',
     'dl.source': 'or from source',
 
-    'foot.disclaimer': 'An independent project by Lucas Maziero. Not affiliated with, endorsed by, or supported by Anthropic.'
+    'foot.by': 'Built by'
   },
 
   pt: {
@@ -85,7 +85,7 @@ const STRINGS = {
     'dl.note': 'Exige ter feito login do Claude Code uma vez na mesma máquina. Um SHA-256 é publicado ao lado de cada arquivo.',
     'dl.source': 'ou pelo código-fonte',
 
-    'foot.disclaimer': 'Projeto independente de Lucas Maziero. Sem vínculo, endosso ou suporte da Anthropic.'
+    'foot.by': 'Feito por'
   }
 };
 
