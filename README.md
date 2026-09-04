@@ -134,6 +134,14 @@ timestamp of the last fetch.
 The mascot in the header goes gray on a fetch error or an open incident, the same signal the
 widget's badge gives.
 
+**With no token** there is nothing to timestamp, so the footer carries the way out instead: a link
+that opens the Claude Code setup page. It names the actual dead end - **Get Claude Code** when there
+is no `~/.claude` on the machine at all, **How to sign in** when there is one but no usable token.
+That directory is the test rather than a `claude` on PATH, because the desktop app and the IDE
+extensions write it without ever installing a CLI, and a PATH check would tell an active user they
+had never installed anything. Nothing is installed for you: piping an install script into a shell on
+someone's behalf is not a thing a usage widget should do.
+
 **Tray.** The icon is the ring with the number inside, drawn one size at a time so the shell never
 has to shrink it, including the in-between sizes display scaling asks for (25px at 125%). The
 tooltip carries both windows.
@@ -191,6 +199,7 @@ installer/          packaging           tools/       icon and preview generators
 | `paths.py` | Where each OS keeps the credentials, transcripts and preferences |
 | `credentials.py` | Reads Claude Code's OAuth token, from a file or the macOS keychain |
 | `autostart.py` | Start with the session: Run key, LaunchAgent or .desktop entry |
+| `signin.py` | Tells the two no-token dead ends apart and opens the setup page |
 | `api.py` | Usage and incidents; `parse()` split out so the contract tests without a network |
 | `tokens.py` | Sums the window's tokens from local transcripts |
 | `poller.py` | Collection thread, history, burn rate and projection |

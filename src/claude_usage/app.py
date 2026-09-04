@@ -10,7 +10,7 @@ from PySide6.QtGui import QAction, QActionGroup, QColor, QFont, QIcon, QPainter,
 from PySide6.QtNetwork import QLocalServer, QLocalSocket
 from PySide6.QtWidgets import QApplication, QMenu, QSystemTrayIcon
 
-from . import autostart, i18n, paint, paths, theme
+from . import autostart, i18n, paint, paths, signin, theme
 from .i18n import t
 from .panel import Panel
 from .poller import Poller, Snapshot
@@ -154,6 +154,7 @@ class App(QObject):
         self.widget.menu_requested.connect(self._popup_menu)
         self.widget.refresh_requested.connect(self.refresh)
         self.panel.refresh_requested.connect(self.refresh)
+        self.panel.setup_requested.connect(signin.open_help)
         self.poller.updated.connect(self.on_update)
         self.poller.busy.connect(self.widget.set_busy)
 

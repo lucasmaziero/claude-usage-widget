@@ -132,6 +132,14 @@ reais da janela, incidentes abertos em `status.claude.com` e o carimbo da últim
 O mascote do cabeçalho acinzenta quando há erro de coleta ou incidente aberto, o mesmo sinal que o
 selo do widget dá.
 
+**Sem token** não há o que carimbar com hora, então o rodapé carrega a saída: um link que abre a
+página de setup do Claude Code. Ele nomeia o beco exato — **Instalar o Claude Code** quando não há
+`~/.claude` nenhum na máquina, **Como fazer login** quando há um mas sem token utilizável. O teste é
+esse diretório, e não um `claude` no PATH, porque o app de desktop e as extensões de IDE o escrevem
+sem nunca instalar uma CLI, e checar o PATH diria a um usuário ativo que ele nunca instalou nada.
+Nada é instalado por você: despejar script de instalação num shell em nome de alguém não é coisa que
+um widget de uso deva fazer.
+
 **Bandeja.** O ícone é o anel com o número dentro, desenhado num tamanho por vez para o shell não
 precisar reduzir nada, inclusive nos tamanhos que a escala do monitor pede (25px a 125%). O tooltip
 traz as duas janelas.
@@ -189,6 +197,7 @@ installer/          empacotamento       tools/       geradores de ícone e previ
 | `paths.py` | Onde cada sistema guarda credenciais, transcripts e preferências |
 | `credentials.py` | Lê o token OAuth do Claude Code, do arquivo ou do chaveiro do macOS |
 | `autostart.py` | Iniciar com a sessão: chave Run, LaunchAgent ou entrada .desktop |
+| `signin.py` | Separa os dois becos sem token e abre a página de setup |
 | `api.py` | Consulta de uso e incidentes; `parse()` separado para testar sem rede |
 | `tokens.py` | Soma tokens da janela pelos transcripts locais |
 | `poller.py` | Thread de coleta, histórico, burn rate e projeção |

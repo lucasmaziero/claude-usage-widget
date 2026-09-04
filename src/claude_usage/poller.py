@@ -9,7 +9,8 @@ from dataclasses import dataclass, field
 
 from PySide6.QtCore import QThread, Signal
 
-from . import api, credentials, tokens
+from . import api, credentials, signin, tokens
+from .i18n import t
 
 
 @dataclass
@@ -21,6 +22,7 @@ class Snapshot:
     incidents: list[str] = field(default_factory=list)
     subscription: str = ""
     error: str = ""
+    setup: str = ""            # signin.INSTALL or signin.SIGNIN, else empty
     at: float = field(default_factory=time.time)
 
     @property
@@ -74,7 +76,12 @@ class Poller(QThread):
         try:
             creds = credentials.load()
         except credentials.CredentialsError as exc:
-            return Snapshot(error=str(exc))
+            # Two dead ends wear the same exception. "Run `claude` to sign in"
+            # is wrong advice for someone who has never installed it, so the
+            # message is chosen here rather than where the file was missed.
+            need = signin.needed()
+            message = t("error.no_claude") if need == signin.INSTALL else str(exc)
+            return Snapshot(error=message, setup=need)
 
         usage = api.fetch_usage(creds.token)
         snap = Snapshot(usage=usage, subscription=creds.subscription,

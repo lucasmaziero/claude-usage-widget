@@ -51,6 +51,8 @@ STRINGS: dict[str, dict[str, str]] = {
         "menu.language": "Language",
         "menu.language_auto": "Automatic",
         "menu.autostart": "Start with {os}",
+        "panel.get_claude": "Get Claude Code",
+        "panel.how_signin": "How to sign in",
         "menu.quit": "Quit",
         "menu.seconds": "{n} seconds",
         "menu.minute": "1 minute",
@@ -62,11 +64,14 @@ STRINGS: dict[str, dict[str, str]] = {
         # time
         "time.now": "now",
         # errors, all user facing
-        "error.no_credentials": "{path} not found: run `claude` once to sign in",
-        "error.no_keychain": ("no Claude Code token in the login keychain: "
-                              "run `claude` once to sign in"),
+        # What to do comes first in every one of these: the panel elides a
+        # long line, and the tail is the half that tells the user what to do.
+        "error.no_credentials": "run `claude` once to sign in - {path} not found",
+        "error.no_claude": "no sign of Claude Code on this machine",
+        "error.no_keychain": ("run `claude` once to sign in - no token in the "
+                              "login keychain"),
         "error.unreadable": "could not read {path}: {reason}",
-        "error.no_token": "credentials without accessToken: sign in to Claude Code again",
+        "error.no_token": "sign in to Claude Code again - credentials carry no accessToken",
         "error.unauthorized": "token refused (401): run `claude` to refresh it",
         "error.no_headers": "HTTP {code} response carried no usage headers",
         "error.network": "network: {reason}",
@@ -108,6 +113,8 @@ STRINGS: dict[str, dict[str, str]] = {
         "menu.language": "Idioma",
         "menu.language_auto": "Automático",
         "menu.autostart": "Iniciar com o {os}",
+        "panel.get_claude": "Instalar o Claude Code",
+        "panel.how_signin": "Como fazer login",
         "menu.quit": "Sair",
         "menu.seconds": "{n} segundos",
         "menu.minute": "1 minuto",
@@ -119,11 +126,12 @@ STRINGS: dict[str, dict[str, str]] = {
         # time
         "time.now": "agora",
         # errors, all user facing
-        "error.no_credentials": "{path} não existe: faça login com `claude` uma vez",
-        "error.no_keychain": ("sem token do Claude Code no chaveiro: "
-                              "faça login com `claude` uma vez"),
+        "error.no_credentials": "faça login com `claude` uma vez - {path} não existe",
+        "error.no_claude": "nenhum sinal do Claude Code nesta máquina",
+        "error.no_keychain": ("faça login com `claude` uma vez - sem token no "
+                              "chaveiro"),
         "error.unreadable": "não consegui ler {path}: {reason}",
-        "error.no_token": "credenciais sem accessToken: refaça o login do Claude Code",
+        "error.no_token": "refaça o login do Claude Code - credenciais sem accessToken",
         "error.unauthorized": "token recusado (401): rode `claude` para renovar",
         "error.no_headers": "resposta HTTP {code} sem headers de uso",
         "error.network": "rede: {reason}",

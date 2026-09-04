@@ -12,7 +12,7 @@ from PySide6.QtCore import QPoint, QPointF, QRectF, Qt, Signal
 from PySide6.QtGui import QFont, QPainter
 from PySide6.QtWidgets import QWidget
 
-from . import brand, paint, theme
+from . import brand, paint, signin, theme
 from .i18n import t, tn
 from .poller import Snapshot
 from .theme import LG, MD, SM
@@ -34,6 +34,7 @@ REFRESH_W = 76
 
 class Panel(QWidget):
     refresh_requested = Signal()
+    setup_requested = Signal()          # the way out when there is no token
 
     def __init__(self, settings) -> None:
         super().__init__(None)
@@ -41,6 +42,7 @@ class Panel(QWidget):
         self.snap: Snapshot | None = None
         self.projection = ""
         self._hover_refresh = False
+        self._hover_setup = False
         self._hidden_at = 0.0
 
         self.setWindowFlags(
@@ -87,6 +89,22 @@ class Panel(QWidget):
     def _refresh_zone(self) -> QRectF:
         """Hit area of the "atualizar agora" link, in window coordinates."""
         return QRectF(M + W - PAD - REFRESH_W, M + H - PAD - 20, REFRESH_W, 20)
+
+    def _setup_label(self) -> str:
+        """Empty unless the user is stuck without a token."""
+        if not (self.snap and self.snap.setup):
+            return ""
+        key = "panel.get_claude" if self.snap.setup == signin.INSTALL else "panel.how_signin"
+        return t(key) + "  →"
+
+    def _setup_zone(self) -> QRectF:
+        """Hit area of the setup link, measured rather than fixed: it shares the
+        footer with the refresh link and the two labels differ per language."""
+        label = self._setup_label()
+        if not label:
+            return QRectF()
+        width, _ = paint.ink(label, 8, QFont.Weight.DemiBold)
+        return QRectF(M + PAD, M + H - PAD - 20, min(width + 6, COL - REFRESH_W - SM), 20)
 
     # -------------------------------------------------------------- painting
     def paintEvent(self, _event) -> None:
@@ -193,10 +211,18 @@ class Panel(QWidget):
 
     def _footer(self, p: QPainter, snap: Snapshot | None, right) -> None:
         foot = QRectF(PAD, H - PAD - 20, COL, 20)
-        stamp = time.strftime("%H:%M:%S", time.localtime(snap.at)) if snap else "--:--:--"
-        every = int(self.settings["poll_sec"])
-        cadence = f"{every}s" if every < 60 else f"{every // 60}min"
-        paint.text(p, foot, t("panel.updated", stamp=stamp, cadence=cadence), theme.FAINT, 8)
+        label = self._setup_label()
+        if label:
+            # With no token there is nothing worth timestamping, so the slot
+            # carries the way out instead of the hour a failure last repeated.
+            paint.text(p, foot, label,
+                       theme.ACCENT if self._hover_setup else theme.MUTED, 8,
+                       QFont.Weight.DemiBold)
+        else:
+            stamp = time.strftime("%H:%M:%S", time.localtime(snap.at)) if snap else "--:--:--"
+            every = int(self.settings["poll_sec"])
+            cadence = f"{every}s" if every < 60 else f"{every // 60}min"
+            paint.text(p, foot, t("panel.updated", stamp=stamp, cadence=cadence), theme.FAINT, 8)
         paint.text(p, self._refresh_zone().translated(-M, -M), t("panel.refresh_now"),
                    theme.ACCENT if self._hover_refresh else theme.MUTED, 8, align=right)
 
@@ -210,14 +236,20 @@ class Panel(QWidget):
 
     # ----------------------------------------------------------------- mouse
     def mouseMoveEvent(self, event) -> None:
-        hover = self._refresh_zone().contains(event.position())
-        if hover != self._hover_refresh:
-            self._hover_refresh = hover
-            self.setCursor(Qt.CursorShape.PointingHandCursor if hover
+        where = event.position()
+        refresh = self._refresh_zone().contains(where)
+        setup = self._setup_zone().contains(where)
+        if refresh != self._hover_refresh or setup != self._hover_setup:
+            self._hover_refresh, self._hover_setup = refresh, setup
+            self.setCursor(Qt.CursorShape.PointingHandCursor if refresh or setup
                            else Qt.CursorShape.ArrowCursor)
             self.update()
 
     def mouseReleaseEvent(self, event) -> None:
-        if (event.button() == Qt.MouseButton.LeftButton
-                and self._refresh_zone().contains(event.position())):
+        if event.button() != Qt.MouseButton.LeftButton:
+            return
+        where = event.position()
+        if self._refresh_zone().contains(where):
             self.refresh_requested.emit()
+        elif self._setup_zone().contains(where):
+            self.setup_requested.emit()
