@@ -169,14 +169,16 @@ não tem base para a segunda afirmação.
 | Mostrar widget | Deixa só o ícone da bandeja |
 | Modo compacto | Reduz o widget ao anel |
 | Travar posição | Ignora o arrasto |
-| Intervalo | 30 s a 15 min, padrão 2 min |
+| Intervalo | 30 s a 15 min, padrão 2 min; é um piso, não uma cadência fixa |
 | Alertar em | Notifica uma vez por janela nessa porcentagem, padrão 80%; Desligado desliga |
 | Idioma | Automático, Português, English |
 | Iniciar com o *&lt;seu sistema&gt;* | Leva o nome do sistema em que roda; um mecanismo para cada, ver abaixo |
 | Verificar atualizações | Pergunta ao GitHub qual é a última tag, uma vez, quando você clica |
 | Sobre | Versão, autor, licença e a mesma verificação de atualização |
 
-Autostart e preferências são as únicas coisas que mudam de plataforma para plataforma:
+Autostart e preferências são as únicas coisas que mudam de plataforma para plataforma. O
+`history.json` fica ao lado do `settings.json`, no mesmo diretório, com as amostras da taxa de
+queima:
 
 | | Autostart | Preferências |
 | --- | --- | --- |
@@ -230,7 +232,7 @@ installer/          empacotamento       tools/       geradores de ícone e previ
 
 ```powershell
 uv sync                                           # cria o .venv com o grupo de dev
-uv run pytest                                     # 114 testes, sem rede e sem janela
+uv run pytest                                     # 192 testes, sem rede e sem janela
 uv run ruff check .                               # lint (regras em pyproject.toml)
 uv run python tools/preview.py docs/preview.png   # render offline das duas telas
 $env:CLAUDE_USAGE_DEBUG=1; uv run claude-usage    # imprime cada ciclo no console
@@ -268,7 +270,9 @@ uv run python tools/measure_font.py caminho\Inter.ttf    # um arquivo, sem insta
 ```
 
 Ela roda as mesmas doze verificações dos testes e imprime os números. O arquivo de fonte é carregado
-só naquele processo, via `QFontDatabase`, então medir uma face não significa instalá-la.
+só naquele processo, via `QFontDatabase`, então medir uma face não significa instalá-la. A mesma
+chave existe em tempo de execução: o `CLAUDE_USAGE_FONT` fixa uma família, para um desktop cujo
+padrão meça mal.
 
 O que isso revelou:
 
@@ -365,6 +369,13 @@ Coisas que custaram tempo e que o código sozinho não explica:
 - **Clicar no widget com o painel aberto chega em duas partes.** O `Qt.Popup` se fecha sozinho no
   clique de fora e o widget recebe o mesmo clique em seguida; sem guarda, o painel fechava e reabria
   no mesmo gesto. `Panel.just_closed()` engole o segundo evento por 250 ms.
+- **Um pacote perdido parecia defeito.** Não havia retry, então uma conexão que falhava por um
+  segundo pintava o widget de vermelho até o ciclo seguinte — quinze minutos disso no intervalo mais
+  longo. Agora o probe é tentado duas vezes. Resposta HTTP não é repetida: o 429 carrega os headers
+  de limite que são a razão da requisição, e repetir dobraria o custo de estar limitado.
+- **Token expirado não custa mais uma requisição para descobrir.** O `expiresAt` é o carimbo contra
+  o qual o próprio Claude Code renova, então uma requisição feita depois dele volta 401. Agora o
+  widget diz que o token expirou em vez de citar um código de status, e nem manda a requisição.
 - **A taxa de queima morria por horas depois de cada reset de janela.** O deque de amostras era
   limitado por quantidade, não por tempo, então as leituras da janela anterior continuavam nele; o
   `burn_rate()` via a porcentagem cair, tomava aquilo por reset e devolvia zero até elas saírem pela
@@ -395,8 +406,11 @@ E quatro que só aparecem quando o app sai do Windows:
 
 ## Custo
 
-Cada ciclo é um POST de 1 token de saída. A 2 minutos, são cerca de 700 requisições por dia, todas
-do menor tamanho possível. Se incomodar, aumente o intervalo no menu.
+Cada ciclo é um POST que vale um token de saída, a menor requisição que a API aceita. A cada dois
+minutos daria algo como 700 por dia, mas o intervalo é um piso e não uma cadência: depois de três
+leituras que não se movem, a espera estica até quatro vezes ele, então uma máquina ociosa assenta
+perto de 175. Qualquer coisa que mexa no número, qualquer erro e o botão de atualizar põem tudo de
+volta na hora. Suba o intervalo no menu se ainda assim incomodar.
 
 ## Licença
 

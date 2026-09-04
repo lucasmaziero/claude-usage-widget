@@ -171,14 +171,15 @@ basis for the second claim.
 | Show widget | Leaves only the tray icon |
 | Compact mode | Shrinks the widget to the ring |
 | Lock position | Ignores dragging |
-| Interval | 30 s to 15 min, 2 min by default |
+| Interval | 30 s to 15 min, 2 min by default; a floor, not a fixed cadence |
 | Alert at | Notify once per window at this percent, 80% by default; Off turns it off |
 | Language | Automatic, Português, English |
 | Start with *&lt;your OS&gt;* | Named after the system it is running on; one mechanism each, see below |
 | Check for updates | Asks GitHub for the latest tag, once, when you click it |
 | About | Version, author, licence, and the same update check |
 
-Autostart and preferences are the only things that differ per platform:
+Autostart and preferences are the only things that differ per platform. `history.json` sits
+beside `settings.json` in the same directory and holds the burn-rate samples:
 
 | | Autostart | Preferences |
 | --- | --- | --- |
@@ -232,7 +233,7 @@ installer/          packaging           tools/       icon and preview generators
 
 ```powershell
 uv sync                                           # creates the .venv with the dev group
-uv run pytest                                     # 114 tests, no network, no windows
+uv run pytest                                     # 192 tests, no network, no windows
 uv run ruff check .                               # lint (rules in pyproject.toml)
 uv run python tools/preview.py docs/preview.png   # offline render of both surfaces
 $env:CLAUDE_USAGE_DEBUG=1; uv run claude-usage    # prints every cycle to the console
@@ -269,7 +270,9 @@ uv run python tools/measure_font.py path\to\Inter.ttf    # a file, nothing insta
 ```
 
 It runs the same twelve checks the tests do and prints the numbers. A font file is loaded into that
-process only, through `QFontDatabase`, so measuring a face does not mean installing it.
+process only, through `QFontDatabase`, so measuring a face does not mean installing it. The same
+switch is available at runtime: `CLAUDE_USAGE_FONT` pins a family, for a desktop whose default
+measures badly.
 
 What that turned up:
 
@@ -363,6 +366,14 @@ Things that cost time and that the code alone does not explain:
 - **Clicking the widget while the panel is open arrives in two parts.** The `Qt.Popup` closes itself
   on the outside click and the widget receives that same click next; without a guard the panel
   closed and reopened in one gesture. `Panel.just_closed()` swallows the second event for 250 ms.
+- **One dropped packet used to look like breakage.** There was no retry, so a connection that
+  failed for a second painted the widget red until the next cycle - fifteen minutes of it at the
+  longest interval. The probe is now tried twice. An HTTP answer is not retried: 429 carries the
+  rate-limit headers this request exists to read, and repeating it would double the cost of being
+  rate limited.
+- **An expired token no longer costs a request to discover.** `expiresAt` is the timestamp Claude
+  Code itself refreshes against, so a request made past it comes back 401. The widget now says the
+  token expired instead of quoting a status code, and does not send the request at all.
 - **The burn rate used to die for hours after every window reset.** The sample deque was bounded
   by count, not by time, so the readings from the previous window stayed in it; `burn_rate()` saw
   the percentage fall, took that for a reset, and returned zero until they aged out - up to six
@@ -392,8 +403,11 @@ And four that only appear once the app leaves Windows:
 
 ## Cost
 
-Each cycle is a POST worth one output token. At two minutes, that is roughly 700 requests a day, all
-of the smallest size possible. Raise the interval in the menu if it bothers you.
+Each cycle is a POST worth one output token, the smallest request the API accepts. At two minutes
+that would be roughly 700 a day, but the interval is a floor rather than a cadence: after three
+readings that do not move, the wait stretches up to four times it, so an idle machine settles near
+175. Anything that moves the number, any error, and the refresh button all put it straight back.
+Raise the interval in the menu if it still bothers you.
 
 ## License
 

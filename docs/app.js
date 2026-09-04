@@ -33,6 +33,9 @@ const STRINGS = {
     'how.c2t': 'Real token counts',
     'how.c2b': 'The headers only carry percentages. The absolute numbers exist only in the transcripts on your disk, so those are read straight off it — no second account, no telemetry, nothing leaves the machine.',
 
+    'alert.title': 'It speaks first, once.',
+    'alert.lede': "A display only works if you look at it. Once per five-hour window, when usage first crosses a threshold you set, the widget says so through your system's own notifications — and it says the part worth acting on: not that you are at 80%, but that at this rate you have forty minutes left.",
+
     'ui.title': 'A glance, and the whole story.',
     'ui.cap1': 'No number appears twice. The ring says how much of the window is spent, the rows say how long is left. Drag it anywhere; the position is saved.',
     'ui.cap2': 'Click for the panel: the five-hour window on its own card, the weekly one below, real token counts, and how long until you hit the ceiling at the current rate.',
@@ -70,6 +73,9 @@ const STRINGS = {
     'how.c1b': 'O token sai de onde o Claude Code o guardou — um arquivo no Windows e no Linux, o chaveiro de login no macOS — e é relido a cada ciclo. Quando o Claude Code renova, o widget acompanha sozinho.',
     'how.c2t': 'Contagem real de tokens',
     'how.c2b': 'Os headers só trazem porcentagem. Os números absolutos existem apenas nos transcripts do seu disco, então são lidos direto de lá — sem segunda conta, sem telemetria, nada sai da máquina.',
+
+    'alert.title': 'Ele fala primeiro, uma vez.',
+    'alert.lede': 'Mostrador só funciona se você olhar. Uma vez por janela de cinco horas, quando o uso cruza um limiar que você define, o widget avisa pelas notificações do seu próprio sistema — e diz a parte que dá para agir em cima: não que você está em 80%, mas que nesse ritmo sobram quarenta minutos.',
 
     'ui.title': 'Uma olhada, e a história inteira.',
     'ui.cap1': 'Nenhum número aparece duas vezes. O anel diz quanto da janela foi gasto, as linhas dizem quanto falta. Arraste para onde quiser; a posição fica salva.',
