@@ -144,6 +144,13 @@ um widget de uso deva fazer.
 precisar reduzir nada, inclusive nos tamanhos que a escala do monitor pede (25px a 125%). O tooltip
 traz as duas janelas.
 
+**Sobre.** Um cartão pequeno com a versão, o autor, a licença e o repositório, mais um botão
+**Verificar atualizações**. Essa verificação só roda quando você aperta: não há checagem em segundo
+plano nem atualização automática. Ele lê a última tag do GitHub e, se estiver à frente do build em
+uso, vira link para a página do release — baixar e instalar continua sendo seu. GitHub inalcançável
+é reportado como verificação que falhou, nunca como "você está na versão mais recente", porque o app
+não tem base para a segunda afirmação.
+
 <br clear="right">
 
 <div align="center"><img src="docs/tray.png" width="260" alt="Ícone da bandeja em 6%, 47%, 83% e 100%"></div>
@@ -160,6 +167,8 @@ traz as duas janelas.
 | Intervalo | 30 s a 15 min, padrão 2 min |
 | Idioma | Automático, Português, English |
 | Iniciar com o *&lt;seu sistema&gt;* | Leva o nome do sistema em que roda; um mecanismo para cada, ver abaixo |
+| Verificar atualizações | Pergunta ao GitHub qual é a última tag, uma vez, quando você clica |
+| Sobre | Versão, autor, licença e a mesma verificação de atualização |
 
 Autostart e preferências são as únicas coisas que mudam de plataforma para plataforma:
 
@@ -198,6 +207,8 @@ installer/          empacotamento       tools/       geradores de ícone e previ
 | `credentials.py` | Lê o token OAuth do Claude Code, do arquivo ou do chaveiro do macOS |
 | `autostart.py` | Iniciar com a sessão: chave Run, LaunchAgent ou entrada .desktop |
 | `signin.py` | Separa os dois becos sem token e abre a página de setup |
+| `release.py` | Lê a última tag publicada e compara com este build |
+| `about.py` | Versão, autor e a verificação de atualização, num cartão |
 | `api.py` | Consulta de uso e incidentes; `parse()` separado para testar sem rede |
 | `tokens.py` | Soma tokens da janela pelos transcripts locais |
 | `poller.py` | Thread de coleta, histórico, burn rate e projeção |

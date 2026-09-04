@@ -11,6 +11,7 @@ from PySide6.QtNetwork import QLocalServer, QLocalSocket
 from PySide6.QtWidgets import QApplication, QMenu, QSystemTrayIcon
 
 from . import autostart, i18n, paint, paths, signin, theme
+from .about import About
 from .i18n import t
 from .panel import Panel
 from .poller import Poller, Snapshot
@@ -137,6 +138,8 @@ class App(QObject):
         self.qapp = qapp
         self.settings = Settings()
         self.snap: Snapshot | None = None
+        self.about: About | None = None       # built on first use, dropped on a
+                                              # language change so it rebuilds
         i18n.set_language(self.settings["language"])
 
         self.widget = FloatingWidget(self.settings)
@@ -214,6 +217,16 @@ class App(QObject):
         self.menu.addSeparator()
         self.act_autostart = self._check(t("menu.autostart", os=paths.os_name()),
                                          autostart.enabled(), self._toggle_autostart)
+
+        self.menu.addSeparator()
+        act_updates = QAction(t("menu.check_updates"), self.menu)
+        act_updates.triggered.connect(lambda: self.show_about(check=True))
+        self.menu.addAction(act_updates)
+
+        act_about = QAction(t("menu.about"), self.menu)
+        act_about.triggered.connect(lambda: self.show_about())
+        self.menu.addAction(act_about)
+
         self.menu.addSeparator()
         act_quit = QAction(t("menu.quit"), self.menu)
         act_quit.triggered.connect(self.qapp.quit)
@@ -241,6 +254,10 @@ class App(QObject):
         self.settings["language"] = code
         self.settings.save()
         i18n.set_language(code)
+        if self.about is not None:         # its labels were built once, in the old language
+            self.about.close()
+            self.about.deleteLater()
+            self.about = None
         self._build_menu()                 # labels live in the actions themselves
         self.tray.setContextMenu(self.menu)
         if self.snap:
@@ -270,6 +287,20 @@ class App(QObject):
         anchor = QRectF(self.widget.geometry()) if self.widget.isVisible() else None
         screen = self.widget.screen() if self.widget.isVisible() else self.qapp.primaryScreen()
         self.panel.popup_at(anchor, screen)
+
+    def show_about(self, check: bool = False) -> None:
+        """Open the about card, optionally running the update check on the way in
+        so the menu's two entries land in the same place."""
+        if self.about is None:
+            self.about = About()
+        if self.about.isVisible():
+            self.about.hide()
+            return
+        anchor = QRectF(self.widget.geometry()) if self.widget.isVisible() else None
+        screen = self.widget.screen() if self.widget.isVisible() else self.qapp.primaryScreen()
+        self.about.popup_at(anchor, screen)
+        if check:
+            self.about.check()
 
     def _toggle_widget(self, on: bool) -> None:
         self.settings["widget_visible"] = on
@@ -330,6 +361,8 @@ class App(QObject):
             self.panel.update()
 
     def _shutdown(self) -> None:
+        if self.about is not None:
+            self.about.close()             # waits on an update check still in flight
         self.poller.stop()
         self.poller.wait(3000)
         self.tray.hide()

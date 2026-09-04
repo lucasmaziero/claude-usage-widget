@@ -146,6 +146,13 @@ someone's behalf is not a thing a usage widget should do.
 has to shrink it, including the in-between sizes display scaling asks for (25px at 125%). The
 tooltip carries both windows.
 
+**About.** A small card with the version, the author, the licence and the repository, plus a
+**Check for updates** button. That check runs only when you press it: there is no background poll
+and no auto-update. It reads the latest tag from GitHub, and if it is ahead of the running build it
+turns into a link to the release page - downloading and installing stays yours. An unreachable
+GitHub is reported as a failed check, never as "you have the latest version", because the app has no
+basis for the second claim.
+
 <br clear="right">
 
 <div align="center"><img src="docs/tray.png" width="260" alt="Tray icon at 6%, 47%, 83% and 100%"></div>
@@ -162,6 +169,8 @@ tooltip carries both windows.
 | Interval | 30 s to 15 min, 2 min by default |
 | Language | Automatic, Português, English |
 | Start with *&lt;your OS&gt;* | Named after the system it is running on; one mechanism each, see below |
+| Check for updates | Asks GitHub for the latest tag, once, when you click it |
+| About | Version, author, licence, and the same update check |
 
 Autostart and preferences are the only things that differ per platform:
 
@@ -200,6 +209,8 @@ installer/          packaging           tools/       icon and preview generators
 | `credentials.py` | Reads Claude Code's OAuth token, from a file or the macOS keychain |
 | `autostart.py` | Start with the session: Run key, LaunchAgent or .desktop entry |
 | `signin.py` | Tells the two no-token dead ends apart and opens the setup page |
+| `release.py` | Reads the latest published tag and compares it with this build |
+| `about.py` | Version, author and the update check, as a card |
 | `api.py` | Usage and incidents; `parse()` split out so the contract tests without a network |
 | `tokens.py` | Sums the window's tokens from local transcripts |
 | `poller.py` | Collection thread, history, burn rate and projection |
