@@ -39,7 +39,7 @@ MinVersion=10.0
 LicenseFile=..\LICENSE
 
 OutputDir=..\build
-OutputBaseFilename=ClaudeUsage-Setup-{#MyAppVersion}
+OutputBaseFilename=ClaudeUsage-{#MyAppVersion}
 SetupIconFile=claude-usage.ico
 UninstallDisplayIcon={app}\{#MyAppExeName}
 UninstallDisplayName={#MyAppName}

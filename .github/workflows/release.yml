@@ -63,7 +63,7 @@ jobs:
 
       - name: Checksum
         run: |
-          $setup = Get-ChildItem build\ClaudeUsage-Setup-*.exe
+          $setup = Get-ChildItem build\ClaudeUsage-*.exe
           $hash = (Get-FileHash $setup.FullName -Algorithm SHA256).Hash.ToLower()
           "$hash  $($setup.Name)" | Out-File "$($setup.FullName).sha256" -Encoding ascii
 
@@ -71,8 +71,8 @@ jobs:
         with:
           name: dist-windows
           path: |
-            build/ClaudeUsage-Setup-*.exe
-            build/ClaudeUsage-Setup-*.exe.sha256
+            build/ClaudeUsage-*.exe
+            build/ClaudeUsage-*.exe.sha256
           if-no-files-found: error
 
   macos:

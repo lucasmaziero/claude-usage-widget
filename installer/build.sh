@@ -8,7 +8,7 @@
 #
 # macOS produces build/ClaudeUsage-<version>-<arch>.dmg, holding a bundle that
 # LSUIElement keeps out of the Dock. Linux produces
-# build/ClaudeUsage-<version>-<arch>.AppImage. Either way build/dist holds the
+# build/ClaudeUsage-<version>.AppImage. Either way build/dist holds the
 # unpacked app, which is the portable form.
 #
 # Options:
@@ -120,7 +120,7 @@ if [ "$os" = macos ]; then
                    -ov -format UDZO -quiet "$out"
 else
     say appimage
-    out="build/ClaudeUsage-$version-$arch.AppImage"
+    out="build/ClaudeUsage-$version.AppImage"
     appdir=build/work/AppDir
     rm -rf "$appdir"
     mkdir -p "$appdir/usr/bin" "$appdir/usr/share/applications"

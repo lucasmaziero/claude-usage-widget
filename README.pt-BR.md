@@ -51,7 +51,7 @@ isso, no lugar do número o widget mostra `faça login com claude uma vez`.
 
 ### Windows
 
-`ClaudeUsage-Setup-<versão>.exe`, dois cliques. A instalação é **por usuário**, em
+`ClaudeUsage-<versão>.exe`, dois cliques. A instalação é **por usuário**, em
 `%LOCALAPPDATA%\Programs\Claude Usage Widget`. Não pede admin nem passa por UAC. O assistente
 oferece atalho na área de trabalho e iniciar junto com o Windows, ambos opcionais. Desinstala pelo
 painel **Aplicativos instalados**, perguntando antes se deve apagar também suas preferências.
@@ -76,7 +76,7 @@ arquivo. Escolha **Sempre permitir** e ele não pergunta de novo.
 
 ### Linux
 
-`ClaudeUsage-<versão>-x86_64.AppImage`, marcado como executável:
+`ClaudeUsage-<versão>.AppImage`, marcado como executável:
 
 ```bash
 chmod +x ClaudeUsage-*.AppImage
@@ -260,9 +260,9 @@ congela o interpretador e as bibliotecas Qt da máquina em que roda.
 
 | Plataforma | Precisa de | Gera |
 | --- | --- | --- |
-| Windows | Inno Setup (`winget install JRSoftware.InnoSetup`) | `build/ClaudeUsage-Setup-<versão>.exe`, ~21 MB comprimidos para 70 MB instalados |
+| Windows | Inno Setup (`winget install JRSoftware.InnoSetup`) | `build/ClaudeUsage-<versão>.exe`, ~21 MB comprimidos para 70 MB instalados |
 | macOS | Command line tools do Xcode, por causa de `iconutil`, `codesign` e `hdiutil` | `build/ClaudeUsage-<versão>-<arch>.dmg` |
-| Linux | `appimagetool`, baixado na primeira execução | `build/ClaudeUsage-<versão>-<arch>.AppImage` |
+| Linux | `appimagetool`, baixado na primeira execução | `build/ClaudeUsage-<versão>.AppImage` |
 
 Cada execução deixa **um único** artefato em `build/`, o recém-gerado: guardar versões antigas lado
 a lado é como se distribui o arquivo errado por engano.

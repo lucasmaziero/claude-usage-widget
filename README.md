@@ -51,7 +51,7 @@ it the widget shows `run claude once to sign in` instead of a number.
 
 ### Windows
 
-`ClaudeUsage-Setup-<version>.exe`, double-clicked. The install is **per user**, into
+`ClaudeUsage-<version>.exe`, double-clicked. The install is **per user**, into
 `%LOCALAPPDATA%\Programs\Claude Usage Widget`. No admin, no UAC prompt. The wizard offers a desktop
 shortcut and starting with Windows, both optional. It uninstalls from **Installed apps** like any
 program, asking first whether to remove your preferences too.
@@ -77,7 +77,7 @@ file. Choose **Always Allow** and it is never asked again.
 
 ### Linux
 
-`ClaudeUsage-<version>-x86_64.AppImage`, marked executable and run:
+`ClaudeUsage-<version>.AppImage`, marked executable and run:
 
 ```bash
 chmod +x ClaudeUsage-*.AppImage
@@ -261,9 +261,9 @@ freezes the interpreter and the Qt libraries of the machine it runs on.
 
 | Platform | Needs | Produces |
 | --- | --- | --- |
-| Windows | Inno Setup (`winget install JRSoftware.InnoSetup`) | `build/ClaudeUsage-Setup-<version>.exe`, ~21 MB from 70 MB installed |
+| Windows | Inno Setup (`winget install JRSoftware.InnoSetup`) | `build/ClaudeUsage-<version>.exe`, ~21 MB from 70 MB installed |
 | macOS | Xcode command line tools, for `iconutil`, `codesign` and `hdiutil` | `build/ClaudeUsage-<version>-<arch>.dmg` |
-| Linux | `appimagetool`, downloaded on first run | `build/ClaudeUsage-<version>-<arch>.AppImage` |
+| Linux | `appimagetool`, downloaded on first run | `build/ClaudeUsage-<version>.AppImage` |
 
 Every run leaves **exactly one** artifact in `build/`, the one just built: keeping old versions side
 by side is how the wrong file gets shipped.

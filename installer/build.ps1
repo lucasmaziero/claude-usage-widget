@@ -8,7 +8,7 @@
         uv sync
         .\installer\build.ps1
 
-    Produces build\ClaudeUsage-Setup-<version>.exe. Pass -SkipInstaller to stop
+    Produces build\ClaudeUsage-<version>.exe. Pass -SkipInstaller to stop
     after the frozen app (build\dist\ClaudeUsage), which is the portable form.
 
     build\ ends up holding exactly one setup: the one just built. Old versions
@@ -77,7 +77,7 @@ try {
     Write-Host '==> installer' -ForegroundColor Cyan
     # One setup in the folder, always the current one. Stale versions from
     # earlier runs are the easiest thing in the world to ship by accident.
-    Get-ChildItem 'build' -Filter 'ClaudeUsage-Setup-*.exe' -File -ErrorAction SilentlyContinue |
+    Get-ChildItem 'build' -Filter 'ClaudeUsage-*.exe' -File -ErrorAction SilentlyContinue |
         Remove-Item -Force
 
     # ISCC writes the setup and then reopens it to patch in the icons. Real-time
@@ -91,7 +91,7 @@ try {
         Start-Sleep -Seconds 3
     }
 
-    $setup = Get-Item "build\ClaudeUsage-Setup-$version.exe"
+    $setup = Get-Item "build\ClaudeUsage-$version.exe"
     Write-Host ("    {0} ({1} MB)" -f $setup.Name, [math]::Round($setup.Length / 1MB, 1)) `
         -ForegroundColor Green
 }
