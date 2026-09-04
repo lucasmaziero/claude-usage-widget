@@ -81,12 +81,17 @@ jobs:
       fail-fast: false
       matrix:
         # PySide6 has no universal2 wheel, so one bundle per architecture is the
-        # only honest option. If GitHub retires the Intel image, drop that entry
-        # and say so in the release notes rather than shipping a broken .dmg.
+        # only honest option.
+        #
+        # Pin real image names, never a retired one. A label GitHub no longer
+        # offers is not rejected: the job sits queued forever, and because
+        # `publish` needs this matrix, the whole release hangs with four green
+        # jobs and no error to read. That is exactly how macos-13 blocked
+        # v1.1.0 after it was retired.
         include:
           - runner: macos-latest        # Apple Silicon
             arch: arm64
-          - runner: macos-13            # Intel
+          - runner: macos-15-intel      # Intel; macos-13 was retired
             arch: x86_64
     runs-on: ${{ matrix.runner }}
     env:
