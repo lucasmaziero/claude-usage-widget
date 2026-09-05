@@ -14,6 +14,25 @@ import pytest
 from PySide6.QtWidgets import QApplication
 
 
+@pytest.fixture(autouse=True)
+def _never_the_real_config(monkeypatch, tmp_path) -> None:
+    """No test may write into the user's own config directory.
+
+    Two of them did before this existed. Anything that runs a collection cycle
+    saves the burn-rate baseline, and a failed one appends to the error log;
+    only the tests written alongside those features redirected the paths, so
+    the rest wrote into %APPDATA% on the developer's machine and left sixteen
+    fabricated failures in a log meant to be evidence.
+
+    Autouse and here rather than per-file, because the next module to call
+    _collect() will not remember either.
+    """
+    from claude_usage import diag, poller
+
+    monkeypatch.setattr(diag, "LOG_FILE", tmp_path / "errors.log")
+    monkeypatch.setattr(poller, "HISTORY_FILE", tmp_path / "history.json")
+
+
 @pytest.fixture(scope="session")
 def qapp() -> QApplication:
     """One QApplication for the whole session; Qt forbids a second one."""
