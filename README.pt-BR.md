@@ -177,8 +177,8 @@ não tem base para a segunda afirmação.
 | Sobre | Versão, autor, licença e a mesma verificação de atualização |
 
 Autostart e preferências são as únicas coisas que mudam de plataforma para plataforma. O
-`history.json` fica ao lado do `settings.json`, no mesmo diretório, com as amostras da taxa de
-queima:
+`history.json` e o `errors.log` ficam ao lado do `settings.json`, no mesmo diretório, com as
+amostras da taxa de queima e o registro dos ciclos que falharam:
 
 | | Autostart | Preferências |
 | --- | --- | --- |
@@ -215,6 +215,7 @@ installer/          empacotamento       tools/       geradores de ícone e previ
 | `credentials.py` | Lê o token OAuth do Claude Code, do arquivo ou do chaveiro do macOS |
 | `autostart.py` | Iniciar com a sessão: chave Run, LaunchAgent ou entrada .desktop |
 | `signin.py` | Separa os dois becos sem token e abre a página de setup |
+| `diag.py` | Registro limitado de ciclos que falharam, escrito só quando um falha |
 | `release.py` | Lê a última tag publicada e compara com este build |
 | `about.py` | Versão, autor e a verificação de atualização, num cartão |
 | `api.py` | Consulta de uso e incidentes; `parse()` separado para testar sem rede |
@@ -369,6 +370,13 @@ Coisas que custaram tempo e que o código sozinho não explica:
 - **Clicar no widget com o painel aberto chega em duas partes.** O `Qt.Popup` se fecha sozinho no
   clique de fora e o widget recebe o mesmo clique em seguida; sem guarda, o painel fechava e reabria
   no mesmo gesto. `Panel.just_closed()` engole o segundo evento por 250 ms.
+- **Falha às 3 da manhã não deixava rastro.** A mensagem ficava na tela até o ciclo seguinte
+  sobrescrever, então quando alguém ia olhar o app já tinha se recuperado e a evidência tinha
+  sumido. O `errors.log` agora guarda os últimos duzentos ciclos com falha e o contexto que os
+  separa: o status HTTP, quanto tempo desde o último ciclo bom, quando o Claude Code reescreveu as
+  credenciais pela última vez, e se o token estava mesmo vencido. Sucesso não é registrado, então o
+  arquivo continuar vazio já é o sinal. Nenhum dos dois tokens é escrito nele, e um teste lê o
+  arquivo inteiro de volta para provar.
 - **Um pacote perdido parecia defeito.** Não havia retry, então uma conexão que falhava por um
   segundo pintava o widget de vermelho até o ciclo seguinte — quinze minutos disso no intervalo mais
   longo. Agora o probe é tentado duas vezes. Resposta HTTP não é repetida: o 429 carrega os headers

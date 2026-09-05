@@ -178,8 +178,9 @@ basis for the second claim.
 | Check for updates | Asks GitHub for the latest tag, once, when you click it |
 | About | Version, author, licence, and the same update check |
 
-Autostart and preferences are the only things that differ per platform. `history.json` sits
-beside `settings.json` in the same directory and holds the burn-rate samples:
+Autostart and preferences are the only things that differ per platform. `history.json` and
+`errors.log` sit beside `settings.json` in the same directory, holding the burn-rate samples and
+the record of failed cycles:
 
 | | Autostart | Preferences |
 | --- | --- | --- |
@@ -216,6 +217,7 @@ installer/          packaging           tools/       icon and preview generators
 | `credentials.py` | Reads Claude Code's OAuth token, from a file or the macOS keychain |
 | `autostart.py` | Start with the session: Run key, LaunchAgent or .desktop entry |
 | `signin.py` | Tells the two no-token dead ends apart and opens the setup page |
+| `diag.py` | A bounded log of failed cycles, written only when one fails |
 | `release.py` | Reads the latest published tag and compares it with this build |
 | `about.py` | Version, author and the update check, as a card |
 | `api.py` | Usage and incidents; `parse()` split out so the contract tests without a network |
@@ -366,6 +368,13 @@ Things that cost time and that the code alone does not explain:
 - **Clicking the widget while the panel is open arrives in two parts.** The `Qt.Popup` closes itself
   on the outside click and the widget receives that same click next; without a guard the panel
   closed and reopened in one gesture. `Panel.just_closed()` swallows the second event for 250 ms.
+- **A failure that happens at 3am used to leave nothing behind.** The message sat on screen until
+  the next cycle overwrote it, so by the time anyone looked the app had recovered and the evidence
+  was gone. `errors.log` now keeps the last two hundred failed cycles with the context that tells
+  them apart: the HTTP status, how long since the last good cycle, when Claude Code last rewrote the
+  credentials, and whether the token was actually past its expiry. Successes are not logged, so the
+  file staying empty is itself the signal. Neither token is written to it, and a test reads the
+  whole file back to prove it.
 - **One dropped packet used to look like breakage.** There was no retry, so a connection that
   failed for a second painted the widget red until the next cycle - fifteen minutes of it at the
   longest interval. The probe is now tried twice. An HTTP answer is not retried: 429 carries the

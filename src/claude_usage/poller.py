@@ -10,7 +10,7 @@ from dataclasses import dataclass, field
 
 from PySide6.QtCore import QThread, Signal
 
-from . import api, credentials, paths, signin, tokens
+from . import api, credentials, diag, paths, signin, tokens
 from .i18n import t
 
 HISTORY_FILE = paths.config_dir() / "history.json"
@@ -63,6 +63,7 @@ class Poller(QThread):
         self._incidents: list[str] = []
         self._idle = 0                       # consecutive readings that did not move
         self._last_h5: float | None = None
+        self._last_ok = 0.0                  # epoch of the last successful cycle
         self.history: deque[tuple[float, float]] = deque(maxlen=self.HISTORY_MAX)
         self._load_history()
 
@@ -90,6 +91,12 @@ class Poller(QThread):
             self._wake.wait(snap.interval)
             self._wake.clear()
 
+    def _since_ok(self) -> str | None:
+        """Minutes since the last cycle that worked, for the log."""
+        if not self._last_ok:
+            return None
+        return f"{(time.time() - self._last_ok) / 60:.0f}"
+
     def _effective_interval(self) -> int:
         """The chosen interval while anything is moving, stretched while nothing
         is. Never longer than IDLE_MAX times what the user asked for."""
@@ -106,6 +113,7 @@ class Poller(QThread):
                 # so the request would come back 401. Skipping it saves a token
                 # and says what is actually wrong instead of quoting a status.
                 self._idle = 0
+                diag.record("expired", **diag.credentials_context())
                 return Snapshot(error=t("error.expired"), setup=signin.SIGNIN)
         except credentials.CredentialsError as exc:
             # Two dead ends wear the same exception. "Run `claude` to sign in"
@@ -114,6 +122,7 @@ class Poller(QThread):
             need = signin.needed()
             message = t("error.no_claude") if need == signin.INSTALL else str(exc)
             self._idle = 0
+            diag.record(need, **diag.credentials_context())
             return Snapshot(error=message, setup=need)
 
         usage = api.fetch_usage(creds.token)
@@ -138,6 +147,15 @@ class Poller(QThread):
                 snap.totals = tokens.collect(start)
         else:
             self._idle = 0                   # a failure is no reason to look away
+            # The one that matters: an HTTP 401 here means the server refused a
+            # token the file still calls valid, which is a different fault from
+            # one that simply ran out.
+            diag.record("api", code=usage.code or None,
+                        since_ok_min=self._since_ok(),
+                        **diag.credentials_context())
+
+        if usage.ok:
+            self._last_ok = time.time()
 
         now = time.time()
         if now - self._last_status >= self.STATUS_EVERY:

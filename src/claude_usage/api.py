@@ -58,6 +58,7 @@ class Usage:
     fetched_at: float = field(default_factory=time.time)
     ok: bool = False
     error: str = ""                 # user-facing, translated
+    code: int = 0                   # HTTP status, when there was one
 
     @property
     def worst(self) -> float:
@@ -87,8 +88,8 @@ def parse(headers, code: int) -> Usage:
     header contract can be tested without touching the network."""
     if headers.get(H5U) is None and headers.get(D7U) is None:
         if code == 401:
-            return Usage(ok=False, error=t("error.unauthorized"))
-        return Usage(ok=False, error=t("error.no_headers", code=code))
+            return Usage(ok=False, code=code, error=t("error.unauthorized"))
+        return Usage(ok=False, code=code, error=t("error.no_headers", code=code))
 
     return Usage(
         h5=_num(headers, H5U, 100.0),
@@ -157,6 +158,7 @@ def fetch_usage(token: str) -> Usage:
 
     reason = getattr(problem, "reason", problem)
     return Usage(ok=False, error=t("error.network", reason=reason))
+
 
 
 def fetch_incidents() -> list[str]:
