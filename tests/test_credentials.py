@@ -7,7 +7,7 @@ import subprocess
 
 import pytest
 
-from claude_usage import credentials, i18n
+from agent_gauge import credentials, i18n
 
 BLOB = {
     "claudeAiOauth": {

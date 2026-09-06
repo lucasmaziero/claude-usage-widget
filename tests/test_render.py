@@ -12,13 +12,13 @@ import pytest
 from PySide6.QtCore import QEvent, QPointF, Qt
 from PySide6.QtGui import QColor, QFont, QImage, QMouseEvent
 
-from claude_usage import api, brand, paint, theme
-from claude_usage import app as app_module
-from claude_usage.panel import Panel
-from claude_usage.poller import Snapshot
-from claude_usage.settings import Settings
-from claude_usage.theme import SM
-from claude_usage.widget import (
+from agent_gauge import api, brand, paint, theme
+from agent_gauge import app as app_module
+from agent_gauge.panel import Panel
+from agent_gauge.poller import Snapshot
+from agent_gauge.settings import Settings
+from agent_gauge.theme import SM
+from agent_gauge.widget import (
     LABEL_W,
     ORBIT_R,
     ORBIT_T,

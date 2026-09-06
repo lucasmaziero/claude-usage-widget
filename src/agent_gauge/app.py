@@ -20,7 +20,7 @@ from .widget import FloatingWidget
 
 APP_ID = autostart.APP_ID
 PERSONALIZE_KEY = r"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize"
-DEBUG = bool(os.environ.get("CLAUDE_USAGE_DEBUG"))
+DEBUG = bool(os.environ.get("AGENT_GAUGE_DEBUG"))
 TICK_MS = 1000              # reset countdowns advance between polls
 # The Windows shell asks for the small-icon metric times the display scale, so
 # 20px at 125% becomes a request for 25. Without those in-between sizes Qt hands
@@ -473,7 +473,7 @@ def main() -> int:
     prefer_x11()                 # must precede the QApplication
     QApplication.setAttribute(Qt.ApplicationAttribute.AA_DontShowIconsInMenus, False)
     qapp = QApplication(sys.argv)
-    qapp.setApplicationName("Claude Usage Widget")
+    qapp.setApplicationName("Agent Gauge")
     qapp.setQuitOnLastWindowClosed(False)
 
     if _already_running():

@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import pytest
 
-from claude_usage import i18n, release
-from claude_usage.about import About, link
+from agent_gauge import i18n, release
+from agent_gauge.about import About, link
 
 
 @pytest.fixture(autouse=True)
@@ -58,7 +58,7 @@ def test_the_button_comes_back_after_a_check(about):
 def test_links_carry_the_brand_colour(about):
     """A QSS rule for `QLabel a` is ignored by Qt, so the colour has to be on
     the tag; without it every link here renders in the default blue."""
-    from claude_usage import theme
+    from agent_gauge import theme
 
     markup = link("https://example.com", "text")
     assert theme.ACCENT.name() in markup

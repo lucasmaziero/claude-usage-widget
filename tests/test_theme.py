@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import pytest
 
-from claude_usage import api, i18n, theme
+from agent_gauge import api, i18n, theme
 
 
 @pytest.fixture(autouse=True)

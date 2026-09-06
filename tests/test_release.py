@@ -11,7 +11,7 @@ import urllib.request
 
 import pytest
 
-from claude_usage import release
+from agent_gauge import release
 
 
 @pytest.mark.parametrize("text,expected", [
@@ -82,7 +82,7 @@ def _answer(monkeypatch, payload: bytes):
     def fake(request, timeout=None):
         assert request.full_url == release.LATEST_ENDPOINT
         # As itself, not as Claude Code: this call is to GitHub.
-        assert request.get_header("User-agent").startswith("claude-usage-widget/")
+        assert request.get_header("User-agent").startswith("agent-gauge/")
         return _Response(payload)
     monkeypatch.setattr(urllib.request, "urlopen", fake)
 

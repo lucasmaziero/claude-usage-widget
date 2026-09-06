@@ -21,20 +21,20 @@ from pathlib import Path
 
 from .paths import LINUX, MACOS, WINDOWS, home
 
-APP_ID = "ClaudeUsageWidget"
-APP_NAME = "Claude Usage Widget"
-BUNDLE_ID = "com.lucasmaziero.claude-usage-widget"
+APP_ID = "AgentGauge"
+APP_NAME = "Agent Gauge"
+BUNDLE_ID = "com.lucasmaziero.agent-gauge"
 
 RUN_KEY = r"Software\Microsoft\Windows\CurrentVersion\Run"
 PLIST = home() / "Library" / "LaunchAgents" / f"{BUNDLE_ID}.plist"
-DESKTOP = home() / ".config" / "autostart" / "claude-usage-widget.desktop"
+DESKTOP = home() / ".config" / "autostart" / "agent-gauge.desktop"
 
 
 def launch_argv() -> list[str]:
     """How to start this app again from scratch.
 
     A frozen build launches its own executable. From source it is the
-    interpreter plus `-m claude_usage`, preferring pythonw.exe on Windows so no
+    interpreter plus `-m agent_gauge`, preferring pythonw.exe on Windows so no
     console flashes at logon.
     """
     if getattr(sys, "frozen", False):
@@ -44,7 +44,7 @@ def launch_argv() -> list[str]:
         pythonw = exe.with_name("pythonw.exe")
         if pythonw.exists():
             exe = pythonw
-    return [str(exe), "-m", "claude_usage"]
+    return [str(exe), "-m", "agent_gauge"]
 
 
 # ---------------------------------------------------------------- Windows
@@ -103,7 +103,7 @@ def _linux_set(enabled: bool) -> None:
         "Type=Application\n"
         f"Name={APP_NAME}\n"
         f"Exec={exec_line}\n"
-        "Icon=claude-usage-widget\n"
+        "Icon=agent-gauge\n"
         "Terminal=false\n"
         "X-GNOME-Autostart-enabled=true\n",
         encoding="utf-8",

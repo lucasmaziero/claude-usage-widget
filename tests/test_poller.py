@@ -7,8 +7,8 @@ import time
 
 import pytest
 
-from claude_usage import api, credentials, poller, tokens
-from claude_usage.poller import Poller
+from agent_gauge import api, credentials, poller, tokens
+from agent_gauge.poller import Poller
 
 
 @pytest.fixture(autouse=True)

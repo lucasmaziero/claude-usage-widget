@@ -8,9 +8,9 @@ from __future__ import annotations
 
 import time
 
-from claude_usage import api
-from claude_usage.app import alert_due
-from claude_usage.poller import Snapshot
+from agent_gauge import api
+from agent_gauge.app import alert_due
+from agent_gauge.poller import Snapshot
 
 RESET = int(time.time() + 3600)
 NEVER = -1                      # nothing announced yet

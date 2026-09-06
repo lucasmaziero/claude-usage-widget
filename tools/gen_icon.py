@@ -2,8 +2,8 @@
 
 Three platforms want three shapes, so the output format follows the path:
 
-    uv run python tools/gen_icon.py installer/claude-usage.ico     # Windows
-    uv run python tools/gen_icon.py build/ClaudeUsage.iconset      # macOS
+    uv run python tools/gen_icon.py installer/agent-gauge.ico     # Windows
+    uv run python tools/gen_icon.py build/AgentGauge.iconset      # macOS
     uv run python tools/gen_icon.py build/icons                    # Linux
 
 The .iconset is a directory in the layout `iconutil -c icns` expects; the macOS
@@ -26,11 +26,11 @@ import struct
 import sys
 from pathlib import Path
 
-from PySide6.QtCore import QBuffer, QIODevice, QRectF, Qt
+from PySide6.QtCore import QBuffer, QIODevice, QPointF, QRectF, Qt
 from PySide6.QtGui import QColor, QImage, QPainter, QPainterPath
 from PySide6.QtWidgets import QApplication
 
-from claude_usage import brand, theme
+from agent_gauge import paint, theme
 
 # Sizes Windows actually asks for: tray, taskbar, list views, tiles.
 SIZES = (16, 20, 24, 32, 40, 48, 64, 128, 256)
@@ -51,7 +51,16 @@ HICOLOR = (16, 22, 24, 32, 48, 64, 128, 256, 512)
 
 
 def render(size: int) -> QImage:
-    """One square icon: rounded dark plate with the coral mascot centered."""
+    """One square icon: rounded dark plate with the gauge on it.
+
+    The gauge, not a mascot. This app watches more than one agent now, so its
+    icon cannot be any of their marks - and the ring is the thing it actually
+    is. It also survives being sixteen pixels wide, which a face does not: an
+    arc with a gap in it is still unmistakably an arc with a gap in it.
+
+    Left at 72%, far enough round to read as a measurement rather than a circle
+    and short of the point where the gap closes.
+    """
     img = QImage(size, size, QImage.Format.Format_ARGB32)
     img.fill(Qt.GlobalColor.transparent)
 
@@ -62,10 +71,19 @@ def render(size: int) -> QImage:
     plate = QPainterPath()
     plate.addRoundedRect(QRectF(inset, inset, size - inset * 2, size - inset * 2),
                          size * 0.22, size * 0.22)
-    p.fillPath(plate, QColor(theme.SURFACE))
+    # SURFACE2 rather than SURFACE: against a dark taskbar the darker plate
+    # vanished and left the arc floating with no body to sit on.
+    p.fillPath(plate, QColor(theme.SURFACE2))
 
-    mascot = brand.clawd(max(int(size * 0.52), 6), theme.ACCENT)
-    p.drawPixmap(int((size - mascot.width()) / 2), int((size - mascot.height()) / 2), mascot)
+    # A ring with a gap and nothing behind it reads as a loading spinner. The
+    # full track behind it is what makes it a gauge - something measured against
+    # a whole - so it is drawn brighter than the widget's own track, which has a
+    # dark card to sit on and this does not.
+    radius = size * 0.29
+    thickness = max(size * 0.135, 1.8)
+    center = QPointF(size / 2, size / 2)
+    paint.ring(p, center, radius, thickness, 100.0, color=theme.BORDER, track=None)
+    paint.ring(p, center, radius, thickness, 72.0, color=theme.ACCENT, track=None)
     p.end()
     return img
 
@@ -126,13 +144,13 @@ def write_hicolor(out: Path) -> str:
     for size in HICOLOR:
         target = out / f"{size}x{size}" / "apps"
         target.mkdir(parents=True, exist_ok=True)
-        (target / "claude-usage-widget.png").write_bytes(as_png(render(size)))
-    (out / "claude-usage-widget.png").write_bytes(as_png(render(256)))
+        (target / "agent-gauge.png").write_bytes(as_png(render(size)))
+    (out / "agent-gauge.png").write_bytes(as_png(render(256)))
     return f"{out} ({', '.join(str(s) for s in HICOLOR)})"
 
 
 def main() -> None:
-    out = Path(sys.argv[1] if len(sys.argv) > 1 else "installer/claude-usage.ico")
+    out = Path(sys.argv[1] if len(sys.argv) > 1 else "installer/agent-gauge.ico")
     app = QApplication(sys.argv[:1])          # the local reference keeps Qt alive
 
     if out.suffix == ".ico":

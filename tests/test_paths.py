@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from claude_usage import paths
+from agent_gauge import paths
 
 
 @pytest.fixture
@@ -35,31 +35,31 @@ def test_claude_inputs_are_the_same_everywhere(fake_home, on):
 def test_windows_config_follows_appdata(fake_home, on, monkeypatch):
     on("win32")
     monkeypatch.setenv("APPDATA", str(fake_home / "Roaming"))
-    assert paths.config_dir() == fake_home / "Roaming" / "ClaudeUsageWidget"
+    assert paths.config_dir() == fake_home / "Roaming" / "AgentGauge"
 
 
 def test_windows_config_falls_back_to_home(fake_home, on, monkeypatch):
     on("win32")
     monkeypatch.delenv("APPDATA", raising=False)
-    assert paths.config_dir() == fake_home / "ClaudeUsageWidget"
+    assert paths.config_dir() == fake_home / "AgentGauge"
 
 
 def test_macos_config_is_application_support(fake_home, on):
     on("darwin")
     assert paths.config_dir() == (fake_home / "Library" / "Application Support"
-                                  / "ClaudeUsageWidget")
+                                  / "AgentGauge")
 
 
 def test_linux_config_honours_xdg(fake_home, on, monkeypatch):
     on("linux")
     monkeypatch.setenv("XDG_CONFIG_HOME", str(fake_home / "xdg"))
-    assert paths.config_dir() == fake_home / "xdg" / "claude-usage-widget"
+    assert paths.config_dir() == fake_home / "xdg" / "agent-gauge"
 
 
 def test_linux_config_defaults_to_dot_config(fake_home, on, monkeypatch):
     on("linux")
     monkeypatch.delenv("XDG_CONFIG_HOME", raising=False)
-    assert paths.config_dir() == fake_home / ".config" / "claude-usage-widget"
+    assert paths.config_dir() == fake_home / ".config" / "agent-gauge"
 
 
 def test_exactly_one_platform_is_live():

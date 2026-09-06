@@ -21,9 +21,9 @@ from pathlib import Path
 from PySide6.QtGui import QFont, QFontDatabase
 from PySide6.QtWidgets import QApplication
 
-from claude_usage import paint
-from claude_usage.theme import SM
-from claude_usage.widget import (
+from agent_gauge import paint
+from agent_gauge.theme import SM
+from agent_gauge.widget import (
     LABEL_W,
     RING_TEXT_MIN,
     RING_TEXT_PT,
@@ -78,7 +78,7 @@ def row(value: str, tail: str) -> tuple[bool, str, str]:
 
 def tray(label: str) -> tuple[bool, str, str]:
     """Mirrors test_tray_number_fits_the_small_icon."""
-    from claude_usage.app import _fit_in_square
+    from agent_gauge.app import _fit_in_square
 
     w, h = paint.ink(label, _fit_in_square(label, 16), QFont.Weight.DemiBold)
     return max(w, h) <= 14, f"{max(w, h):.1f}px", "14.0px"

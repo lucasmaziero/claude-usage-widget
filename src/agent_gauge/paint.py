@@ -43,7 +43,7 @@ MEASURED = frozenset({
     "Ubuntu",                        # fits once the gauge number sizes itself
 })
 
-FONT_ENV = "CLAUDE_USAGE_FONT"      # pin a family; also how the layout is measured
+FONT_ENV = "AGENT_GAUGE_FONT"      # pin a family; also how the layout is measured
 
 _family: str | None = None
 
@@ -52,7 +52,7 @@ def set_family(name: str | None) -> None:
     """Pin the family, or pass None to resolve it again.
 
     For tools/measure_font.py and the tests. The app never calls this: a user
-    who wants a different face sets CLAUDE_USAGE_FONT.
+    who wants a different face sets AGENT_GAUGE_FONT.
     """
     global _family
     _family = name

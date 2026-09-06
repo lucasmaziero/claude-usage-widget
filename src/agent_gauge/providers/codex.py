@@ -75,7 +75,7 @@ class Codex(Provider):
     def incidents(self) -> list[str]:
         """The page's own description, and only when it is not "operational"."""
         request = urllib.request.Request(
-            STATUS_ENDPOINT, headers={"User-Agent": "claude-usage-widget"})
+            STATUS_ENDPOINT, headers={"User-Agent": "agent-gauge"})
         try:
             with urllib.request.urlopen(request, timeout=TIMEOUT) as response:
                 status = json.loads(
@@ -123,7 +123,7 @@ class Codex(Provider):
                 "Authorization": f"Bearer {creds.token}",
                 "chatgpt-account-id": creds.account,
                 "Accept": "application/json",
-                "User-Agent": "claude-usage-widget",
+                "User-Agent": "agent-gauge",
             },
         )
 

@@ -6,7 +6,7 @@ import time
 from datetime import UTC, datetime
 from pathlib import Path
 
-from claude_usage import tokens
+from agent_gauge import tokens
 
 
 def _line(msg_id: str, when: float, **usage: int) -> str:

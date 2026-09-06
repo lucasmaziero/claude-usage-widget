@@ -1,7 +1,7 @@
 """Header parsing: the contract with the Anthropic API, without the network."""
 from __future__ import annotations
 
-from claude_usage import api
+from agent_gauge import api
 
 HEADERS_OK = {
     api.H5U: "0.71",

@@ -1,24 +1,28 @@
-; Inno Setup script for the Claude Usage Widget.
+; Inno Setup script for the Agent Gauge.
 ; Built by installer/build.ps1, which passes MyAppVersion in from pyproject.toml.
 ;
 ; Per-user install on purpose: PrivilegesRequired=lowest keeps it out of
 ; Program Files, so no UAC prompt and no admin needed for a tray utility that
 ; only ever touches the current user's %APPDATA%.
 
-#define MyAppName "Claude Usage Widget"
+#define MyAppName "Agent Gauge"
 #define MyAppPublisher "Lucas Maziero"
-#define MyAppExeName "ClaudeUsage.exe"
-#define MyAppUrl "https://github.com/lucasmaziero/claude-usage-widget"
+#define MyAppExeName "AgentGauge.exe"
+#define MyAppUrl "https://github.com/lucasmaziero/agent-gauge"
 #ifndef MyAppVersion
   #define MyAppVersion "1.0.0"
 #endif
 #ifndef SourceDir
-  #define SourceDir "..\build\dist\ClaudeUsage"
+  #define SourceDir "..\build\dist\AgentGauge"
 #endif
 
 [Setup]
 ; Never change AppId: it is what ties an upgrade to the existing install.
-AppId={{7B3F2C41-9E5A-4C7D-8F26-2A0D5E9B4C13}
+; This one is new because the product is: Claude Usage Widget installed to a
+; different folder under a different exe name, so letting Inno treat this as an
+; upgrade of that would have scattered the new files through the old layout.
+; The old install is removed outright instead - see RemoveOldInstall below.
+AppId={{A4E1C9D2-6B78-4F3A-91C5-0E7D2B8A6F41}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
 AppVerName={#MyAppName} {#MyAppVersion}
@@ -29,7 +33,7 @@ AppUpdatesURL={#MyAppUrl}
 VersionInfoVersion={#MyAppVersion}
 VersionInfoDescription={#MyAppName} Setup
 
-DefaultDirName={autopf}\Claude Usage Widget
+DefaultDirName={autopf}\Agent Gauge
 DefaultGroupName={#MyAppName}
 DisableProgramGroupPage=yes
 PrivilegesRequired=lowest
@@ -39,8 +43,8 @@ MinVersion=10.0
 LicenseFile=..\LICENSE
 
 OutputDir=..\build
-OutputBaseFilename=ClaudeUsage-{#MyAppVersion}
-SetupIconFile=claude-usage.ico
+OutputBaseFilename=AgentGauge-{#MyAppVersion}
+SetupIconFile=agent-gauge.ico
 UninstallDisplayIcon={app}\{#MyAppExeName}
 UninstallDisplayName={#MyAppName}
 Compression=lzma2/max
@@ -74,7 +78,7 @@ Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: de
 ; Same key and value name the app's own "Iniciar com o Windows" menu item uses,
 ; so the two never disagree about the current state.
 Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; \
-    ValueType: string; ValueName: "ClaudeUsageWidget"; \
+    ValueType: string; ValueName: "AgentGauge"; \
     ValueData: """{app}\{#MyAppExeName}"""; Flags: uninsdeletevalue; Tasks: autostart
 
 [Run]
@@ -104,14 +108,53 @@ procedure StopWidget;
 var
   ResultCode: Integer;
 begin
-  Exec(ExpandConstant('{sys}\taskkill.exe'), '/F /T /IM ClaudeUsage.exe',
+  Exec(ExpandConstant('{sys}\taskkill.exe'), '/F /T /IM AgentGauge.exe',
        '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
   Sleep(800);   // let Windows release the file handles before we touch them
+end;
+
+// Everything the widget left behind under its old name. It watches two agents
+// now and is called Agent Gauge; an install of the old one would sit beside
+// this one with its own tray icon, its own autostart entry and its own poll,
+// which is two of everything and one confused user.
+//
+// The old uninstaller keeps preferences when it runs silently, deliberately.
+// Under a new name nothing can ever read them again, so they go here instead of
+// ageing in %APPDATA% forever.
+procedure RemoveOldInstall;
+var
+  UninstallPath, SettingsDir: String;
+  ResultCode: Integer;
+begin
+  Exec(ExpandConstant('{sys}\taskkill.exe'), '/F /T /IM ClaudeUsage.exe',
+       '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+
+  if RegQueryStringValue(HKCU,
+      'Software\Microsoft\Windows\CurrentVersion\Uninstall\' +
+      '{7B3F2C41-9E5A-4C7D-8F26-2A0D5E9B4C13}_is1', 'UninstallString',
+      UninstallPath) then
+  begin
+    UninstallPath := RemoveQuotes(UninstallPath);
+    if FileExists(UninstallPath) then
+    begin
+      Exec(UninstallPath, '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART',
+           '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+      Sleep(1200);
+    end;
+  end;
+
+  SettingsDir := ExpandConstant('{userappdata}\ClaudeUsageWidget');
+  if DirExists(SettingsDir) then
+    DelTree(SettingsDir, True, True, True);
+
+  RegDeleteValue(HKCU, 'Software\Microsoft\Windows\CurrentVersion\Run',
+                 'ClaudeUsageWidget');
 end;
 
 function PrepareToInstall(var NeedsRestart: Boolean): String;
 begin
   StopWidget;
+  RemoveOldInstall;
   Result := '';
 end;
 
@@ -129,7 +172,7 @@ var
 begin
   if CurUninstallStep = usPostUninstall then
   begin
-    SettingsDir := ExpandConstant('{userappdata}\ClaudeUsageWidget');
+    SettingsDir := ExpandConstant('{userappdata}\AgentGauge');
     if DirExists(SettingsDir) and not UninstallSilent then
       if SuppressibleMsgBox('Remover tambem as preferencias do widget (posicao, intervalo)?',
                             mbConfirmation, MB_YESNO, IDNO) = IDYES then

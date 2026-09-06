@@ -6,9 +6,9 @@
 #   uv sync
 #   ./installer/build.sh
 #
-# macOS produces build/ClaudeUsage-<version>-<arch>.dmg, holding a bundle that
+# macOS produces build/AgentGauge-<version>-<arch>.dmg, holding a bundle that
 # LSUIElement keeps out of the Dock. Linux produces
-# build/ClaudeUsage-<version>.AppImage. Either way build/dist holds the
+# build/AgentGauge-<version>.AppImage. Either way build/dist holds the
 # unpacked app, which is the portable form.
 #
 # Options:
@@ -49,7 +49,7 @@ case "$(uname -s)" in
     *) echo "build.sh covers macOS and Linux; use installer/build.ps1 on Windows" >&2; exit 2 ;;
 esac
 
-printf '%sClaude Usage Widget %s (%s %s)%s\n' "$cyan" "$version" "$os" "$arch" "$off"
+printf '%sAgent Gauge %s (%s %s)%s\n' "$cyan" "$version" "$os" "$arch" "$off"
 
 if [ "$clean" -eq 1 ] && [ -d build ]; then
     say clean
@@ -59,23 +59,23 @@ fi
 # ------------------------------------------------------------------- icon
 say icon
 if [ "$os" = macos ]; then
-    rm -rf build/ClaudeUsage.iconset
-    uv run python tools/gen_icon.py build/ClaudeUsage.iconset
+    rm -rf build/AgentGauge.iconset
+    uv run python tools/gen_icon.py build/AgentGauge.iconset
     # iconutil rather than a hand-rolled container: Apple's tool is the only
     # thing that is certainly producing an .icns macOS will accept.
-    iconutil -c icns -o build/ClaudeUsage.icns build/ClaudeUsage.iconset
-    note "build/ClaudeUsage.icns"
+    iconutil -c icns -o build/AgentGauge.icns build/AgentGauge.iconset
+    note "build/AgentGauge.icns"
 else
     uv run python tools/gen_icon.py build/icons
 fi
 
 # -------------------------------------------------------------- frozen app
 say "frozen app"
-uv run --extra build pyinstaller installer/claude-usage.spec \
+uv run --extra build pyinstaller installer/agent-gauge.spec \
     --noconfirm --distpath build/dist --workpath build/work --log-level WARN
 
 if [ "$os" = macos ]; then
-    app="build/dist/Claude Usage Widget.app"
+    app="build/dist/Agent Gauge.app"
     [ -d "$app" ] || { echo "expected $app" >&2; exit 1; }
 
     # PyInstaller signs the individual binaries; this seals the bundle, which is
@@ -92,8 +92,8 @@ if [ "$os" = macos ]; then
         printf '%s    codesign --verify complained; test the .dmg by hand%s\n' "$grey" "$off"
     payload="$app"
 else
-    payload="build/dist/ClaudeUsage"
-    [ -x "$payload/ClaudeUsage" ] || { echo "expected $payload/ClaudeUsage" >&2; exit 1; }
+    payload="build/dist/AgentGauge"
+    [ -x "$payload/AgentGauge" ] || { echo "expected $payload/AgentGauge" >&2; exit 1; }
 fi
 
 note "$payload ($(du -sh "$payload" | cut -f1))"
@@ -106,51 +106,51 @@ fi
 # ---------------------------------------------------------------- package
 # One artifact in build/, always the current one. Stale versions from earlier
 # runs are the easiest thing in the world to ship by accident.
-rm -f build/ClaudeUsage-*.dmg build/ClaudeUsage-*.AppImage
+rm -f build/AgentGauge-*.dmg build/AgentGauge-*.AppImage
 
 if [ "$os" = macos ]; then
     say dmg
-    out="build/ClaudeUsage-$version-$arch.dmg"
+    out="build/AgentGauge-$version-$arch.dmg"
     stage=build/work/dmg
     rm -rf "$stage"
     mkdir -p "$stage"
     cp -R "$app" "$stage/"
     ln -s /Applications "$stage/Applications"      # the drag-here target
-    hdiutil create -volname "Claude Usage Widget" -srcfolder "$stage" \
+    hdiutil create -volname "Agent Gauge" -srcfolder "$stage" \
                    -ov -format UDZO -quiet "$out"
 else
     say appimage
-    out="build/ClaudeUsage-$version.AppImage"
+    out="build/AgentGauge-$version.AppImage"
     appdir=build/work/AppDir
     rm -rf "$appdir"
     mkdir -p "$appdir/usr/bin" "$appdir/usr/share/applications"
 
-    cp -R build/dist/ClaudeUsage "$appdir/usr/bin/"
+    cp -R build/dist/AgentGauge "$appdir/usr/bin/"
 
     hicolor="$appdir/usr/share/icons/hicolor"
     mkdir -p "$hicolor"
     for dir in build/icons/*x*; do cp -R "$dir" "$hicolor/"; done
     # AppImage also wants the icon loose at the root, named after the .desktop.
-    cp build/icons/claude-usage-widget.png "$appdir/claude-usage-widget.png"
+    cp build/icons/agent-gauge.png "$appdir/agent-gauge.png"
 
-    cat > "$appdir/claude-usage-widget.desktop" <<'DESKTOP'
+    cat > "$appdir/agent-gauge.desktop" <<'DESKTOP'
 [Desktop Entry]
 Type=Application
-Name=Claude Usage Widget
+Name=Agent Gauge
 Comment=Claude Code rate-limit usage on a floating desktop widget
-Exec=ClaudeUsage
-Icon=claude-usage-widget
+Exec=AgentGauge
+Icon=agent-gauge
 Categories=Utility;Monitor;
 Terminal=false
 DESKTOP
-    cp "$appdir/claude-usage-widget.desktop" "$appdir/usr/share/applications/"
+    cp "$appdir/agent-gauge.desktop" "$appdir/usr/share/applications/"
 
     cat > "$appdir/AppRun" <<'APPRUN'
 #!/bin/sh
 # readlink -f, because an AppImage is normally reached through a symlink and
 # $0 would otherwise point outside the mounted image.
 HERE=$(dirname "$(readlink -f "$0")")
-exec "$HERE/usr/bin/ClaudeUsage/ClaudeUsage" "$@"
+exec "$HERE/usr/bin/AgentGauge/AgentGauge" "$@"
 APPRUN
     chmod +x "$appdir/AppRun"
 

@@ -14,8 +14,8 @@ import urllib.request
 
 import pytest
 
-from claude_usage import api, credentials, i18n, providers
-from claude_usage.providers.codex import Codex
+from agent_gauge import api, credentials, i18n, providers
+from agent_gauge.providers.codex import Codex
 
 CODEX = providers.get("codex")
 CLAUDE = providers.get("claude")
@@ -223,7 +223,7 @@ def test_codex_has_no_transcripts_to_count():
 
 
 def test_claude_still_counts_its_transcripts(monkeypatch):
-    from claude_usage import tokens
+    from agent_gauge import tokens
 
     monkeypatch.setattr(tokens, "collect",
                         lambda since, projects=None: tokens.TokenTotals(sessions=3))
@@ -233,7 +233,7 @@ def test_claude_still_counts_its_transcripts(monkeypatch):
 # ---------------------------------------------------------------- switching
 def test_switching_drops_the_other_agent_s_baseline(monkeypatch, tmp_path):
     """A burn rate mixing two agents' windows would be a fiction."""
-    from claude_usage.poller import Poller
+    from agent_gauge.poller import Poller
 
     poll = Poller(120, CLAUDE)
     poll.history.append((time.time(), 40.0))
@@ -246,7 +246,7 @@ def test_switching_drops_the_other_agent_s_baseline(monkeypatch, tmp_path):
 
 
 def test_the_poller_asks_whichever_provider_it_holds(monkeypatch):
-    from claude_usage.poller import Poller
+    from agent_gauge.poller import Poller
 
     class Fake:
         key, label, help_url = "fake", "Fake", "https://example.com"
@@ -265,7 +265,7 @@ def test_the_poller_asks_whichever_provider_it_holds(monkeypatch):
             return []
 
         def totals(self, _since):
-            from claude_usage.tokens import TokenTotals
+            from agent_gauge.tokens import TokenTotals
             return TokenTotals()
 
     snap = Poller(120, Fake())._collect()
@@ -277,7 +277,7 @@ def test_the_poller_asks_whichever_provider_it_holds(monkeypatch):
 def test_every_provider_has_its_own_mark(qapp):
     """The mark is the only thing on the widget that says whose numbers these
     are - the ring and the rows look identical either way."""
-    from claude_usage import brand
+    from agent_gauge import brand
 
     paths = {brand.MARKS[p.key] for p in providers.ALL}
     assert len(paths) == len(providers.ALL)
@@ -286,13 +286,13 @@ def test_every_provider_has_its_own_mark(qapp):
 def test_the_marks_share_one_geometry(qapp):
     """Both drawings span y 5..20 of the viewBox, which is what lets one sizing
     and centring calculation serve both."""
-    from claude_usage import brand
+    from agent_gauge import brand
 
     first = brand.mark("claude", 13)
     assert brand.mark("codex", 13).size() == first.size()
 
 
 def test_an_unknown_key_still_draws_something(qapp):
-    from claude_usage import brand
+    from agent_gauge import brand
 
     assert not brand.mark("gemini", 13).isNull()

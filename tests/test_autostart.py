@@ -8,7 +8,7 @@ import sys
 
 import pytest
 
-from claude_usage import autostart
+from agent_gauge import autostart
 
 
 @pytest.fixture
@@ -23,14 +23,14 @@ def unix(monkeypatch, tmp_path):
 def test_from_source_reinvokes_the_module(monkeypatch):
     monkeypatch.setattr(sys, "frozen", False, raising=False)
     argv = autostart.launch_argv()
-    assert argv[-2:] == ["-m", "claude_usage"]
+    assert argv[-2:] == ["-m", "agent_gauge"]
     assert argv[0].endswith(("python.exe", "pythonw.exe", "python", "python3"))
 
 
 def test_a_frozen_build_launches_itself(monkeypatch):
     monkeypatch.setattr(sys, "frozen", True, raising=False)
-    monkeypatch.setattr(sys, "executable", "/Applications/Claude.app/Contents/MacOS/ClaudeUsage")
-    assert autostart.launch_argv() == ["/Applications/Claude.app/Contents/MacOS/ClaudeUsage"]
+    monkeypatch.setattr(sys, "executable", "/Applications/Claude.app/Contents/MacOS/AgentGauge")
+    assert autostart.launch_argv() == ["/Applications/Claude.app/Contents/MacOS/AgentGauge"]
 
 
 def test_macos_writes_a_loadable_plist(unix, monkeypatch):
@@ -71,9 +71,9 @@ def test_linux_writes_a_desktop_entry(unix, monkeypatch):
 def test_a_path_with_spaces_is_quoted(unix, monkeypatch):
     monkeypatch.setattr(autostart, "MACOS", False)
     monkeypatch.setattr(autostart, "LINUX", True)
-    monkeypatch.setattr(autostart, "launch_argv", lambda: ["/opt/my app/run", "-m", "claude_usage"])
+    monkeypatch.setattr(autostart, "launch_argv", lambda: ["/opt/my app/run", "-m", "agent_gauge"])
     autostart.set_enabled(True)
-    assert 'Exec="/opt/my app/run" -m claude_usage' in autostart.DESKTOP.read_text(encoding="utf-8")
+    assert 'Exec="/opt/my app/run" -m agent_gauge' in autostart.DESKTOP.read_text(encoding="utf-8")
 
 
 @pytest.mark.parametrize("os_name", ["MACOS", "LINUX"])

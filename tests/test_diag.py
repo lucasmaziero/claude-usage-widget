@@ -6,8 +6,8 @@ import time
 
 import pytest
 
-from claude_usage import api, credentials, diag, paths, poller
-from claude_usage.poller import Poller
+from agent_gauge import api, credentials, diag, paths, poller
+from agent_gauge.poller import Poller
 
 SECRET = "sk-ant-oat-do-not-log-me"
 

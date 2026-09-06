@@ -3,10 +3,10 @@ from __future__ import annotations
 
 import pytest
 
-from claude_usage import credentials, i18n, paths, providers, signin
-from claude_usage.panel import Panel
-from claude_usage.poller import Poller
-from claude_usage.settings import Settings
+from agent_gauge import credentials, i18n, paths, providers, signin
+from agent_gauge.panel import Panel
+from agent_gauge.poller import Poller
+from agent_gauge.settings import Settings
 
 
 @pytest.fixture(autouse=True)
@@ -64,7 +64,7 @@ def test_being_signed_out_keeps_the_original_message(monkeypatch, has_claude_dir
 
 
 def test_a_working_snapshot_offers_nothing(monkeypatch):
-    from claude_usage import api
+    from agent_gauge import api
 
     monkeypatch.setattr(credentials, "load", lambda *a, **k: credentials.Credentials(
         token="t", expires_at=0, subscription="max", tier="default"))
@@ -79,7 +79,7 @@ def test_a_working_snapshot_offers_nothing(monkeypatch):
     (signin.SIGNIN, "panel.how_signin"),
 ])
 def test_the_panel_offers_the_matching_way_out(qapp, tmp_path, state, key):
-    from claude_usage.poller import Snapshot
+    from agent_gauge.poller import Snapshot
 
     panel = Panel(Settings(tmp_path / "settings.json"))
     panel.set_snapshot(Snapshot(error="stuck", setup=state))
@@ -88,8 +88,8 @@ def test_the_panel_offers_the_matching_way_out(qapp, tmp_path, state, key):
 
 
 def test_a_healthy_panel_has_no_hit_zone(qapp, tmp_path):
-    from claude_usage import api
-    from claude_usage.poller import Snapshot
+    from agent_gauge import api
+    from agent_gauge.poller import Snapshot
 
     panel = Panel(Settings(tmp_path / "settings.json"))
     panel.set_snapshot(Snapshot(usage=api.Usage(h5=10, ok=True)))

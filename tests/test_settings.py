@@ -4,7 +4,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from claude_usage.settings import DEFAULTS, MAX_POLL, MIN_POLL, Settings
+from agent_gauge.settings import DEFAULTS, MAX_POLL, MIN_POLL, Settings
 
 
 def test_defaults_when_no_file(tmp_path: Path):

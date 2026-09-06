@@ -63,7 +63,7 @@ jobs:
 
       - name: Checksum
         run: |
-          $setup = Get-ChildItem build\ClaudeUsage-*.exe
+          $setup = Get-ChildItem build\AgentGauge-*.exe
           $hash = (Get-FileHash $setup.FullName -Algorithm SHA256).Hash.ToLower()
           "$hash  $($setup.Name)" | Out-File "$($setup.FullName).sha256" -Encoding ascii
 
@@ -71,8 +71,8 @@ jobs:
         with:
           name: dist-windows
           path: |
-            build/ClaudeUsage-*.exe
-            build/ClaudeUsage-*.exe.sha256
+            build/AgentGauge-*.exe
+            build/AgentGauge-*.exe.sha256
           if-no-files-found: error
 
   macos:
@@ -117,7 +117,7 @@ jobs:
       - name: Checksum
         run: |
           cd build
-          for f in ClaudeUsage-*.dmg; do
+          for f in AgentGauge-*.dmg; do
             shasum -a 256 "$f" | tee "$f.sha256"
           done
 
@@ -125,8 +125,8 @@ jobs:
         with:
           name: dist-macos-${{ matrix.arch }}
           path: |
-            build/ClaudeUsage-*.dmg
-            build/ClaudeUsage-*.dmg.sha256
+            build/AgentGauge-*.dmg
+            build/AgentGauge-*.dmg.sha256
           if-no-files-found: error
 
   linux:
@@ -159,7 +159,7 @@ jobs:
       - name: Checksum
         run: |
           cd build
-          for f in ClaudeUsage-*.AppImage; do
+          for f in AgentGauge-*.AppImage; do
             sha256sum "$f" | tee "$f.sha256"
           done
 
@@ -167,8 +167,8 @@ jobs:
         with:
           name: dist-linux
           path: |
-            build/ClaudeUsage-*.AppImage
-            build/ClaudeUsage-*.AppImage.sha256
+            build/AgentGauge-*.AppImage
+            build/AgentGauge-*.AppImage.sha256
           if-no-files-found: error
 
   publish:

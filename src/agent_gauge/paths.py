@@ -4,9 +4,9 @@ Claude Code itself is consistent across platforms - always `~/.claude` - so the
 inputs need no per-OS logic. Only this app's own preferences do, because each
 platform has a different idea of where a user-level config belongs:
 
-    Windows   %APPDATA%\ClaudeUsageWidget
-    macOS     ~/Library/Application Support/ClaudeUsageWidget
-    Linux     $XDG_CONFIG_HOME/claude-usage-widget  (default ~/.config)
+    Windows   %APPDATA%\AgentGauge
+    macOS     ~/Library/Application Support/AgentGauge
+    Linux     $XDG_CONFIG_HOME/agent-gauge  (default ~/.config)
 
 The Windows path is unchanged from the versions that only ran there, so an
 existing install keeps its settings.
@@ -21,8 +21,8 @@ WINDOWS = sys.platform == "win32"
 MACOS = sys.platform == "darwin"
 LINUX = not WINDOWS and not MACOS      # BSD included: it behaves like Linux here
 
-APP_DIR = "ClaudeUsageWidget"          # Windows and macOS convention
-XDG_DIR = "claude-usage-widget"        # Linux convention
+APP_DIR = "AgentGauge"          # Windows and macOS convention
+XDG_DIR = "agent-gauge"        # Linux convention
 
 
 def os_name() -> str:

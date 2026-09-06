@@ -15,7 +15,7 @@ WINDOWS = sys.platform == "win32"
 MACOS = sys.platform == "darwin"
 LINUX = not WINDOWS and not MACOS
 
-BUNDLE_ID = "com.lucasmaziero.claude-usage-widget"
+BUNDLE_ID = "com.lucasmaziero.agent-gauge"
 
 # The version lives in pyproject.toml and nowhere else.
 VERSION = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))["project"]["version"]
@@ -36,12 +36,12 @@ if WINDOWS:
   kids=[
     StringFileInfo([StringTable('040904B0', [
       StringStruct('CompanyName', 'Lucas Maziero'),
-      StringStruct('FileDescription', 'Claude Usage Widget'),
+      StringStruct('FileDescription', 'Agent Gauge'),
       StringStruct('FileVersion', '{VERSION}'),
-      StringStruct('InternalName', 'ClaudeUsage'),
+      StringStruct('InternalName', 'AgentGauge'),
       StringStruct('LegalCopyright', 'Copyright (c) 2026 Lucas Maziero. MIT License.'),
-      StringStruct('OriginalFilename', 'ClaudeUsage.exe'),
-      StringStruct('ProductName', 'Claude Usage Widget'),
+      StringStruct('OriginalFilename', 'AgentGauge.exe'),
+      StringStruct('ProductName', 'Agent Gauge'),
       StringStruct('ProductVersion', '{VERSION}')])]),
     VarFileInfo([VarStruct('Translation', [1033, 1200])])
   ]
@@ -52,8 +52,8 @@ if WINDOWS:
 
 # The icon is built first by the build script, in the format the platform wants.
 ICON = {
-    "win32": ROOT / "installer" / "claude-usage.ico",
-    "darwin": ROOT / "build" / "ClaudeUsage.icns",
+    "win32": ROOT / "installer" / "agent-gauge.ico",
+    "darwin": ROOT / "build" / "AgentGauge.icns",
 }.get(sys.platform)
 icon = str(ICON) if ICON and ICON.exists() else None       # Linux has none to embed
 
@@ -107,7 +107,7 @@ exe = EXE(  # noqa: F821
     a.scripts,
     [],
     exclude_binaries=True,
-    name="ClaudeUsage",
+    name="AgentGauge",
     console=False,                       # tray app: a console window would be noise
     icon=icon,
     version=str(version_file) if version_file else None,
@@ -122,7 +122,7 @@ coll = COLLECT(  # noqa: F821
     a.datas,
     strip=False,
     upx=False,
-    name="ClaudeUsage",
+    name="AgentGauge",
 )
 
 if MACOS:
@@ -131,7 +131,7 @@ if MACOS:
     # app switcher. There is no runtime equivalent reachable from Qt.
     app = BUNDLE(  # noqa: F821
         coll,
-        name="Claude Usage Widget.app",
+        name="Agent Gauge.app",
         icon=icon,
         bundle_identifier=BUNDLE_ID,
         version=VERSION,
@@ -141,8 +141,8 @@ if MACOS:
             "LSMinimumSystemVersion": "11.0",
             "CFBundleShortVersionString": VERSION,
             "CFBundleVersion": VERSION,
-            "CFBundleName": "Claude Usage Widget",
-            "CFBundleDisplayName": "Claude Usage Widget",
+            "CFBundleName": "Agent Gauge",
+            "CFBundleDisplayName": "Agent Gauge",
             "NSHumanReadableCopyright": "Copyright (c) 2026 Lucas Maziero. MIT License.",
         },
     )

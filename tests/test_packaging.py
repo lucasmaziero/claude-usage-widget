@@ -10,7 +10,7 @@ import re
 import tomllib
 from pathlib import Path
 
-import claude_usage
+import agent_gauge
 
 ROOT = Path(__file__).resolve().parents[1]
 PYPROJECT = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
@@ -18,7 +18,7 @@ VERSION = PYPROJECT["project"]["version"]
 
 
 def test_the_package_agrees_with_pyproject():
-    assert claude_usage.__version__ == VERSION
+    assert agent_gauge.__version__ == VERSION
 
 
 def test_the_version_is_a_plain_triple():
@@ -27,19 +27,19 @@ def test_the_version_is_a_plain_triple():
 
 
 def test_every_build_script_produces_the_same_name():
-    """`ClaudeUsage-<version>`, one shape across three platforms. The .dmg is the
+    """`AgentGauge-<version>`, one shape across three platforms. The .dmg is the
     exception on purpose: two Mac architectures ship in one release and would
     otherwise collide."""
-    iss = (ROOT / "installer" / "claude-usage.iss").read_text(encoding="utf-8")
+    iss = (ROOT / "installer" / "agent-gauge.iss").read_text(encoding="utf-8")
     sh = (ROOT / "installer" / "build.sh").read_text(encoding="utf-8")
 
-    assert "OutputBaseFilename=ClaudeUsage-{#MyAppVersion}" in iss
-    assert 'out="build/ClaudeUsage-$version.AppImage"' in sh
-    assert 'out="build/ClaudeUsage-$version-$arch.dmg"' in sh
+    assert "OutputBaseFilename=AgentGauge-{#MyAppVersion}" in iss
+    assert 'out="build/AgentGauge-$version.AppImage"' in sh
+    assert 'out="build/AgentGauge-$version-$arch.dmg"' in sh
 
 
 def test_the_release_workflow_collects_those_names():
     release = (ROOT / ".github" / "workflows" / "release.yml").read_text(encoding="utf-8")
-    for pattern in ("build/ClaudeUsage-*.exe", "build/ClaudeUsage-*.dmg",
-                    "build/ClaudeUsage-*.AppImage"):
+    for pattern in ("build/AgentGauge-*.exe", "build/AgentGauge-*.dmg",
+                    "build/AgentGauge-*.AppImage"):
         assert pattern in release, pattern

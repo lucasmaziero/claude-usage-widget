@@ -17,10 +17,10 @@ import urllib.request
 
 from . import __version__
 
-REPO = "lucasmaziero/claude-usage-widget"
+REPO = "lucasmaziero/agent-gauge"
 LATEST_ENDPOINT = f"https://api.github.com/repos/{REPO}/releases/latest"
 RELEASES_URL = f"https://github.com/{REPO}/releases/latest"
-USER_AGENT = f"claude-usage-widget/{__version__}"
+USER_AGENT = f"agent-gauge/{__version__}"
 TIMEOUT = 10
 
 

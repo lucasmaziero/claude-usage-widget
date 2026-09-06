@@ -27,7 +27,7 @@ def _never_the_real_config(monkeypatch, tmp_path) -> None:
     Autouse and here rather than per-file, because the next module to call
     _collect() will not remember either.
     """
-    from claude_usage import diag, poller
+    from agent_gauge import diag, poller
 
     monkeypatch.setattr(diag, "LOG_FILE", tmp_path / "errors.log")
     monkeypatch.setattr(poller, "HISTORY_FILE", tmp_path / "history.json")
@@ -60,7 +60,7 @@ def real_fonts(qapp) -> None:
         QT_QPA_PLATFORM=cocoa uv run pytest                 # macOS
         QT_QPA_PLATFORM=xcb uv run pytest                   # Linux
     """
-    from claude_usage import paint
+    from agent_gauge import paint
 
     resolved = paint.family()
     if resolved not in paint.MEASURED:

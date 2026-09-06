@@ -18,11 +18,11 @@ from PySide6.QtCore import QRectF, Qt
 from PySide6.QtGui import QColor, QImage, QPainter
 from PySide6.QtWidgets import QApplication
 
-from claude_usage import api, i18n, paint, theme, tokens
-from claude_usage.panel import Panel
-from claude_usage.poller import Snapshot
-from claude_usage.settings import Settings
-from claude_usage.widget import FloatingWidget
+from agent_gauge import api, i18n, paint, theme, tokens
+from agent_gauge.panel import Panel
+from agent_gauge.poller import Snapshot
+from agent_gauge.settings import Settings
+from agent_gauge.widget import FloatingWidget
 
 GAP = 20
 BACKDROP = QColor("#08080A")
