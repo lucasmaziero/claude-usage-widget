@@ -403,6 +403,11 @@ class App(QObject):
 
     # ----------------------------------------------------------------- cycle
     def on_update(self, snap: Snapshot) -> None:
+        if snap.provider and snap.provider != self.provider.key:
+            # In flight when the user switched. Drawing it would put one agent's
+            # numbers under the other's name, which is the single thing this
+            # must never do.
+            return
         self.snap = snap
         if DEBUG:
             u = snap.usage

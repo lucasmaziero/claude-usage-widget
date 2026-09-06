@@ -133,7 +133,11 @@ class Panel(QWidget):
 
     def _header(self, p: QPainter, snap: Snapshot | None, right) -> None:
         head = QRectF(PAD, HEAD_Y, COL, 20)
-        provider = providers.get(str(self.settings["provider"]))
+        # From the snapshot when there is one, so the name and the numbers
+        # cannot disagree; from the setting only while there is nothing to
+        # show yet.
+        provider = providers.get(
+            snap.provider if snap and snap.provider else str(self.settings["provider"]))
 
         # Each agent wears its own mark, and the mark goes gray with the same
         # signal as before. Which one is drawn is the header's way of saying

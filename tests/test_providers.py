@@ -231,8 +231,10 @@ def test_claude_still_counts_its_transcripts(monkeypatch):
 
 
 # ---------------------------------------------------------------- switching
-def test_switching_drops_the_other_agent_s_baseline(monkeypatch, tmp_path):
-    """A burn rate mixing two agents' windows would be a fiction."""
+def test_switching_waits_for_a_safe_moment(monkeypatch, tmp_path):
+    """set_provider is called from the UI thread while the collection thread may
+    be inside a fetch, so it changes nothing on the spot - clearing the history
+    there races with the append that ends that fetch."""
     from agent_gauge.poller import Poller
 
     poll = Poller(120, CLAUDE)
@@ -240,9 +242,49 @@ def test_switching_drops_the_other_agent_s_baseline(monkeypatch, tmp_path):
     poll._last_h5 = 40.0
 
     poll.set_provider(CODEX)
+    assert poll.provider is CLAUDE          # not yet
+    assert poll.history                     # not yet
+
+    poll._apply_pending()                   # what the next cycle does first
     assert poll.provider is CODEX
-    assert not poll.history
+    assert not poll.history                 # a rate across two agents is a fiction
     assert poll._last_h5 is None
+
+
+def test_a_snapshot_says_which_agent_it_came_from(monkeypatch, tmp_path):
+    """The bug this fixes: switching mid-fetch delivered the previous agent's
+    numbers, and the header - reading the setting rather than the snapshot -
+    drew them under the new agent's name and mark."""
+    from agent_gauge.poller import Poller
+
+    def usage(_creds):
+        return api.Usage(h5=7, h5_reset=int(time.time() + 3600), ok=True)
+
+    monkeypatch.setattr(CLAUDE, "fetch", usage, raising=False)
+    monkeypatch.setattr(CLAUDE, "credentials",
+                        lambda: credentials.Credentials("t", 0, "max", ""), raising=False)
+    monkeypatch.setattr(CLAUDE, "incidents", list, raising=False)
+
+    poll = Poller(120, CLAUDE)
+    snap = poll._collect()
+    snap.provider = poll.provider.key       # run() stamps it; _collect is called direct
+    assert snap.provider == "claude"
+
+
+def test_a_queued_switch_is_taken_up_by_the_next_cycle(monkeypatch, tmp_path):
+    from agent_gauge.poller import Poller
+
+    monkeypatch.setattr(CODEX, "credentials",
+                        lambda: credentials.Credentials("t", 0, "", ""), raising=False)
+    monkeypatch.setattr(CODEX, "fetch",
+                        lambda _c: api.Usage(h5=2, h5_reset=int(time.time() + 3600), ok=True),
+                        raising=False)
+    monkeypatch.setattr(CODEX, "incidents", list, raising=False)
+
+    poll = Poller(120, CLAUDE)
+    poll.set_provider(CODEX)
+    poll._collect()
+    assert poll.provider is CODEX
 
 
 def test_the_poller_asks_whichever_provider_it_holds(monkeypatch):

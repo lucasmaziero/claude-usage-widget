@@ -28,6 +28,7 @@ class Snapshot:
     setup: str = ""            # signin.INSTALL or signin.SIGNIN, else empty
     waiting: bool = False      # no data, but nothing is wrong: see _collect
     interval: int = 0          # seconds until the next fetch, backoff included
+    provider: str = ""         # whose numbers these are; see App.on_update
     at: float = field(default_factory=time.time)
 
     @property
@@ -73,7 +74,8 @@ class Poller(QThread):
         self._idle = 0                       # consecutive readings that did not move
         self._last_h5: float | None = None
         self._last_ok = 0.0                  # epoch of the last successful cycle
-        self._watching = False               # waiting on Claude Code, not on the clock
+        self._watching = False               # waiting on the agent, not on the clock
+        self._pending: object | None = None   # a switch waiting for a safe moment
         self.history: deque[tuple[float, float]] = deque(maxlen=self.HISTORY_MAX)
         self._load_history()
 
@@ -96,6 +98,10 @@ class Poller(QThread):
             # Stamped here rather than inside _collect so the number the UI
             # counts down from is the one this loop actually waits.
             snap.interval = self._effective_interval()
+            # Stamped so the UI can tell whose numbers these are. A cycle that
+            # was already in flight when the user switched still lands, and
+            # without this it would be drawn under the new agent's name.
+            snap.provider = self.provider.key
             self.updated.emit(snap)   # data first, so the spinner stops on fresh values
             self.busy.emit(False)
             self._sleep(snap.interval)
@@ -140,16 +146,32 @@ class Poller(QThread):
         return self._interval * factor
 
     def set_provider(self, provider) -> None:
-        """Switch what is being watched. The history belongs to the old one, so
-        it goes: a burn rate mixing two agents' windows would be a fiction."""
-        self.provider = provider
+        """Switch what is being watched, at the next safe moment.
+
+        Nothing is changed here. This is called from the UI thread and the
+        collection thread may be inside a fetch, so the switch is left as a note
+        and applied at the top of the next cycle - otherwise clearing the
+        history races with the append that ends that fetch.
+        """
+        self._pending = provider
+        self._wake.set()
+
+    def _apply_pending(self) -> None:
+        """Take up a queued switch. Runs on the collection thread only.
+
+        The history goes with the old agent: a burn rate computed across two
+        agents' windows would be a fiction, not a mix.
+        """
+        if self._pending is None:
+            return
+        self.provider, self._pending = self._pending, None
         self.history.clear()
         self._save_history()
         self._last_h5 = None
         self._idle = 0
-        self._wake.set()
 
     def _collect(self) -> Snapshot:
+        self._apply_pending()
         self._watching = False
         try:
             creds = self.provider.credentials()

@@ -248,7 +248,10 @@ class FloatingWidget(QWidget):
         identical either way.
         """
         unwell = bool(snap and (snap.error or snap.incidents))
-        key = providers.get(str(self.settings["provider"])).key
+        # The snapshot's own agent, not the setting: the two differ for as long
+        # as a cycle that started before the switch is still in flight.
+        key = providers.get(
+            snap.provider if snap and snap.provider else str(self.settings["provider"])).key
         icon = brand.mark(key, MASCOT_PT, theme.FAINT if unwell else theme.ACCENT,
                           self.devicePixelRatioF())
         w = icon.width() / icon.devicePixelRatio()
