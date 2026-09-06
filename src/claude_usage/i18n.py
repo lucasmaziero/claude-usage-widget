@@ -83,7 +83,10 @@ STRINGS: dict[str, dict[str, str]] = {
         # long line, and the tail is the half that tells the user what to do.
         "error.no_credentials": "run `claude` once to sign in - {path} not found",
         "error.no_claude": "no sign of Claude Code on this machine",
-        "error.expired": "run `claude` to refresh - the saved token expired",
+        # Kept short on purpose: the widget's error column is 120px at 9pt,
+        # and "waiting for Claude Code" runs 127. An elided reassurance is
+        # not reassuring.
+        "error.waiting": "waiting for Claude",
         "error.no_keychain": ("run `claude` once to sign in - no token in the "
                               "login keychain"),
         "error.unreadable": "could not read {path}: {reason}",
@@ -159,7 +162,7 @@ STRINGS: dict[str, dict[str, str]] = {
         # errors, all user facing
         "error.no_credentials": "faça login com `claude` uma vez - {path} não existe",
         "error.no_claude": "nenhum sinal do Claude Code nesta máquina",
-        "error.expired": "rode `claude` para renovar - o token salvo expirou",
+        "error.waiting": "esperando o Claude",
         "error.no_keychain": ("faça login com `claude` uma vez - sem token no "
                               "chaveiro"),
         "error.unreadable": "não consegui ler {path}: {reason}",

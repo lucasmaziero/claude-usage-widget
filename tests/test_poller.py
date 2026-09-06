@@ -106,8 +106,6 @@ def test_burn_rate_recovers_after_a_reset(monkeypatch, history_file):
 def test_an_expired_token_skips_the_request(monkeypatch, history_file):
     """The timestamp is the one Claude Code refreshes against, so the request
     would come back 401. Sending it anyway spends a token to learn nothing."""
-    from claude_usage import signin
-
     monkeypatch.setattr(credentials, "load", lambda *a, **k: credentials.Credentials(
         token="t", expires_at=time.time() - 1, subscription="max", tier="default"))
 
@@ -117,7 +115,55 @@ def test_an_expired_token_skips_the_request(monkeypatch, history_file):
 
     snap = Poller(120)._collect()
     assert not snap.ok
-    assert snap.setup == signin.SIGNIN
+
+
+def test_an_expired_token_is_a_resting_state_not_a_fault(monkeypatch, history_file):
+    """Eight hours without Claude Code is the app's normal overnight condition.
+    Reporting it as an error taught the user to ignore the colour that means
+    something is actually wrong."""
+    monkeypatch.setattr(credentials, "load", lambda *a, **k: credentials.Credentials(
+        token="t", expires_at=time.time() - 1, subscription="max", tier="default"))
+    monkeypatch.setattr(api, "fetch_usage", lambda _t: api.Usage(ok=True))
+
+    poll = Poller(120)
+    snap = poll._collect()
+    assert snap.waiting
+    assert snap.setup == ""              # nothing to click that would help
+    assert poll._watching                # so the file, not the clock, ends the wait
+
+
+def test_a_real_failure_is_still_a_failure(monkeypatch, history_file):
+    _signed_in(monkeypatch)
+    monkeypatch.setattr(api, "fetch_usage",
+                        lambda _t: api.Usage(ok=False, code=401, error="refused"))
+    poll = Poller(120)
+    snap = poll._collect()
+    assert not snap.waiting
+    assert not poll._watching
+
+
+def test_the_wait_ends_when_claude_code_writes(monkeypatch, history_file):
+    """The point of watching: recovery in seconds rather than up to a full
+    interval after the token is renewed."""
+    poll = Poller(120)
+    poll._watching = True
+    monkeypatch.setattr(Poller, "CREDS_POLL", 0.01)
+    mtimes = iter([100.0, 100.0, 200.0])
+    monkeypatch.setattr(poll, "_creds_mtime", lambda: next(mtimes))
+
+    started = time.monotonic()
+    poll._sleep(30)
+    assert time.monotonic() - started < 1.0
+
+
+def test_a_healthy_cycle_never_stats_the_file(monkeypatch, history_file):
+    poll = Poller(120)
+    poll._watching = False
+    stats = []
+    monkeypatch.setattr(poll, "_creds_mtime", lambda: stats.append(1) or 0.0)
+    poll._wake.set()
+    poll._sleep(30)
+    assert not stats
 
 
 # ----------------------------------------------------------------- backoff

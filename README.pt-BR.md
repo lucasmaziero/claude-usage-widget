@@ -377,13 +377,29 @@ Coisas que custaram tempo e que o código sozinho não explica:
   credenciais pela última vez, e se o token estava mesmo vencido. Sucesso não é registrado, então o
   arquivo continuar vazio já é o sinal. Nenhum dos dois tokens é escrito nele, e um teste lê o
   arquivo inteiro de volta para provar.
+
+  Uma sequência da mesma falha colapsa numa linha só, com os valores mais recentes, uma contagem
+  `repeat=` e o início em `since=`. Não é firula: o primeiro apagão que isso capturou repetiu de
+  dois em dois minutos por quatro horas, escreveu 130 linhas idênticas e empurrou o começo do
+  próprio apagão para fora do arquivo.
 - **Um pacote perdido parecia defeito.** Não havia retry, então uma conexão que falhava por um
   segundo pintava o widget de vermelho até o ciclo seguinte — quinze minutos disso no intervalo mais
   longo. Agora o probe é tentado duas vezes. Resposta HTTP não é repetida: o 429 carrega os headers
   de limite que são a razão da requisição, e repetir dobraria o custo de estar limitado.
-- **Token expirado não custa mais uma requisição para descobrir.** O `expiresAt` é o carimbo contra
-  o qual o próprio Claude Code renova, então uma requisição feita depois dele volta 401. Agora o
-  widget diz que o token expirou em vez de citar um código de status, e nem manda a requisição.
+- **Token expirado é estado de espera, não falha.** O access token do Claude Code vive oito horas
+  e só é renovado enquanto o Claude Code roda, então uma noite fora termina sem token utilizável —
+  medido, não suposto: três ciclos seguidos de 8,00 h cada. Pintar isso de vermelho fazia o widget
+  gritar lobo pela própria condição normal, então agora ele espera em cinza e diz isso. Vermelho
+  ficou para o que está mesmo errado. A requisição também não é enviada: o `expiresAt` é o carimbo
+  contra o qual o Claude Code renova, então ela só voltaria 401.
+- **A recuperação não espera mais o próximo ciclo.** Enquanto o token está vencido, a única coisa
+  que pode mudar a resposta é o Claude Code reescrever as credenciais, então o carimbo daquele
+  arquivo é observado no lugar do relógio. Usar o Claude Code traz o widget de volta em uns cinco
+  segundos em vez de até um intervalo inteiro, e um `stat` não custa nada.
+- **O que ele não vai fazer é renovar o token sozinho.** O refresh token está ali e funcionaria.
+  Refresh tokens costumam ser de uso único com rotação, então um widget que gastasse um poderia
+  deixar o Claude Code com um token inválido e te deslogar dele — jeito desproporcional de perder
+  uma leitura de medidor.
 - **A taxa de queima morria por horas depois de cada reset de janela.** O deque de amostras era
   limitado por quantidade, não por tempo, então as leituras da janela anterior continuavam nele; o
   `burn_rate()` via a porcentagem cair, tomava aquilo por reset e devolvia zero até elas saírem pela

@@ -203,7 +203,8 @@ class Panel(QWidget):
 
         line = QRectF(PAD, INCIDENT_Y, COL, 18)
         if snap and snap.error:
-            paint.text(p, line, paint.elide(snap.error, COL, 8), theme.BAD, 8)
+            paint.text(p, line, paint.elide(snap.error, COL, 8),
+                       theme.MUTED if snap.waiting else theme.BAD, 8)
         elif snap and snap.incidents:
             paint.text(p, line, paint.elide("! " + snap.incidents[0], COL, 8), theme.WARN, 8)
         else:

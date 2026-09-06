@@ -375,14 +375,30 @@ Things that cost time and that the code alone does not explain:
   credentials, and whether the token was actually past its expiry. Successes are not logged, so the
   file staying empty is itself the signal. Neither token is written to it, and a test reads the
   whole file back to prove it.
+
+  A run of the same failure collapses into one line carrying the newest values, a `repeat=` count
+  and a `since=` start. That is not a nicety: the first outage this caught repeated every two
+  minutes for four hours, wrote 130 identical lines, and pushed the beginning of that very outage
+  out of the file.
 - **One dropped packet used to look like breakage.** There was no retry, so a connection that
   failed for a second painted the widget red until the next cycle - fifteen minutes of it at the
   longest interval. The probe is now tried twice. An HTTP answer is not retried: 429 carries the
   rate-limit headers this request exists to read, and repeating it would double the cost of being
   rate limited.
-- **An expired token no longer costs a request to discover.** `expiresAt` is the timestamp Claude
-  Code itself refreshes against, so a request made past it comes back 401. The widget now says the
-  token expired instead of quoting a status code, and does not send the request at all.
+- **An expired token is a resting state, not a fault.** Claude Code's access token lives eight
+  hours and is only renewed while Claude Code is running, so a night away ends with no usable token
+  - measured, not assumed: three consecutive cycles of 8.00 h each. Painting that red made the
+  widget cry wolf about its own normal condition, so it now waits in grey and says so. Red is kept
+  for the things that are actually wrong. The request is not sent either: `expiresAt` is the
+  timestamp Claude Code refreshes against, so it would only come back 401.
+- **Recovery no longer waits for the next cycle.** While the token is expired the only thing that
+  can change the answer is Claude Code rewriting the credentials, so that file's timestamp is
+  watched instead of the clock. Using Claude Code brings the widget back in about five seconds
+  rather than up to a full interval, and a `stat` costs nothing.
+- **What it will not do is refresh the token itself.** The refresh token is right there and it
+  would work. Refresh tokens are commonly single-use with rotation, so a widget that spent one
+  could leave Claude Code holding an invalid token and log you out of it - a disproportionate way
+  to lose a gauge reading.
 - **The burn rate used to die for hours after every window reset.** The sample deque was bounded
   by count, not by time, so the readings from the previous window stayed in it; `burn_rate()` saw
   the percentage fall, took that for a reset, and returned zero until they aged out - up to six

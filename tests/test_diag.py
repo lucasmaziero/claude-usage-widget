@@ -78,13 +78,42 @@ def test_an_expired_token_is_recorded_as_expired(monkeypatch):
 
 
 def test_the_log_is_bounded(monkeypatch):
+    """Alternating kinds, because the same kind in a row is now one line."""
     monkeypatch.setattr(diag, "MAX_LINES", 5)
     for n in range(12):
-        diag.record("api", n=n)
+        diag.record("api" if n % 2 else "network", n=n)
     kept = lines()
     assert len(kept) == 5
     assert "n=11" in kept[-1]          # the newest survives
     assert "n=7" in kept[0]            # the seven before it are gone
+
+
+def test_a_run_of_the_same_failure_is_one_line():
+    """An expired token failed every two minutes for four hours and wrote 130
+    identical lines, which pushed the start of that outage out of the file."""
+    for n in range(130):
+        diag.record("expired", expires_in_min=-(2 + 2 * n))
+
+    assert len(lines()) == 1
+    only = lines()[0]
+    assert "repeat=130" in only
+    assert "since=" in only
+    assert "expires_in_min=-260" in only        # the newest values, not the first
+
+
+def test_a_different_failure_starts_a_new_line():
+    diag.record("expired", past_expiry="yes")
+    diag.record("api", code=401)
+    diag.record("expired", past_expiry="yes")
+    assert len(lines()) == 3
+    assert "repeat" not in "".join(lines())
+
+
+def test_a_run_keeps_the_time_it_started():
+    diag.record("network", reason="timeout")
+    first = lines()[0].split()[1]
+    diag.record("network", reason="timeout")
+    assert f"since={first}" in lines()[0]
 
 
 def test_a_missing_credentials_file_is_still_recorded(monkeypatch, sandbox):

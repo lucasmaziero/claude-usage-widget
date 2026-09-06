@@ -30,19 +30,47 @@ def _format(kind: str, fields: dict) -> str:
     return f"{stamp} {kind} {parts}".rstrip()
 
 
-def record(kind: str, **fields) -> None:
-    """Append one failure. Never raises: diagnostics must not be the thing that
-    takes the app down."""
-    try:
-        line = _format(kind, fields)
-        LOG_FILE.parent.mkdir(parents=True, exist_ok=True)
+def _run_of(line: str, kind: str) -> tuple[int, str] | None:
+    """If `line` closes a run of this same kind, how long that run already is
+    and when it started. None means a different kind, which starts a new run."""
+    parts = line.split()
+    if len(parts) < 3 or parts[2] != kind:
+        return None
+    count, since = 1, parts[1]
+    for part in parts[3:]:
+        if part.startswith("repeat=") and part[7:].isdigit():
+            count = int(part[7:])
+        elif part.startswith("since="):
+            since = part[6:]
+    return count, since
 
-        previous = []
-        if LOG_FILE.exists():
-            previous = LOG_FILE.read_text(encoding="utf-8").splitlines()
-        kept = [*previous, line][-MAX_LINES:]
-        LOG_FILE.write_text("\n".join(kept) + "\n", encoding="utf-8")
-    except OSError:
+
+def record(kind: str, **fields) -> None:
+    """Note one failed cycle, collapsing a run of the same kind into one line.
+
+    An outage repeats itself. An expired token failed every two minutes for
+    four hours and wrote 130 identical lines, which pushed the beginning of
+    that very outage out of the file - the one part worth having. A run is now
+    a single line carrying the newest values, how many times it has happened
+    and when it started, which is everything those 130 said.
+
+    Never raises: diagnostics must not be the thing that takes the app down.
+    """
+    try:
+        LOG_FILE.parent.mkdir(parents=True, exist_ok=True)
+        previous = (LOG_FILE.read_text(encoding="utf-8").splitlines()
+                    if LOG_FILE.exists() else [])
+
+        line = _format(kind, fields)
+        run = _run_of(previous[-1], kind) if previous else None
+        if run is None:
+            kept = [*previous, line]
+        else:
+            count, since = run
+            kept = [*previous[:-1], f"{line} repeat={count + 1} since={since}"]
+
+        LOG_FILE.write_text("\n".join(kept[-MAX_LINES:]) + "\n", encoding="utf-8")
+    except (OSError, ValueError):
         pass
 
 

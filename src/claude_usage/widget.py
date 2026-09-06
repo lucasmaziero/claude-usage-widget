@@ -317,7 +317,11 @@ class FloatingWidget(QWidget):
     def _paint_error(self, p: QPainter, card: QRectF, snap: Snapshot) -> None:
         col_w = card.right() - MENU_W - SM - COL_X
         msg = paint.elide(snap.error or t("widget.no_data"), col_w, 9)
-        paint.text(p, QRectF(COL_X, card.top(), col_w, card.height()), msg, theme.BAD, 9)
+        # Muted, not red, when nothing is actually wrong: an expired token
+        # after a night away is the app's normal resting state, and alarming
+        # about it teaches the user to ignore the colour that means trouble.
+        color = theme.MUTED if snap.waiting else theme.BAD
+        paint.text(p, QRectF(COL_X, card.top(), col_w, card.height()), msg, color, 9)
 
     def _paint_refresh_ring(self, p: QPainter, snap: Snapshot | None) -> None:
         """Outer ring: a fixed track plus an arc counting down to the next fetch,

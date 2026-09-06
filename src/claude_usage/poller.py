@@ -26,6 +26,7 @@ class Snapshot:
     subscription: str = ""
     error: str = ""
     setup: str = ""            # signin.INSTALL or signin.SIGNIN, else empty
+    waiting: bool = False      # no data, but nothing is wrong: see _collect
     interval: int = 0          # seconds until the next fetch, backoff included
     at: float = field(default_factory=time.time)
 
@@ -54,6 +55,13 @@ class Poller(QThread):
     IDLE_AFTER = 3
     IDLE_MAX = 4
 
+    # While the token is expired the only thing that can change the answer is
+    # Claude Code rewriting the credentials, so the file is watched instead of
+    # the clock. A stat every few seconds costs nothing and turns a two-minute
+    # wait into about five - which is the difference between the widget coming
+    # back as you type and you noticing it was ever out.
+    CREDS_POLL = 5
+
     def __init__(self, interval: int, parent=None) -> None:
         super().__init__(parent)
         self._interval = interval
@@ -64,6 +72,7 @@ class Poller(QThread):
         self._idle = 0                       # consecutive readings that did not move
         self._last_h5: float | None = None
         self._last_ok = 0.0                  # epoch of the last successful cycle
+        self._watching = False               # waiting on Claude Code, not on the clock
         self.history: deque[tuple[float, float]] = deque(maxlen=self.HISTORY_MAX)
         self._load_history()
 
@@ -88,8 +97,32 @@ class Poller(QThread):
             snap.interval = self._effective_interval()
             self.updated.emit(snap)   # data first, so the spinner stops on fresh values
             self.busy.emit(False)
-            self._wake.wait(snap.interval)
+            self._sleep(snap.interval)
             self._wake.clear()
+
+    def _creds_mtime(self) -> float:
+        try:
+            return paths.credentials_file().stat().st_mtime
+        except OSError:
+            return 0.0
+
+    def _sleep(self, seconds: float) -> None:
+        """Wait for the next cycle, but come back the moment Claude Code writes
+        a new token - only while there is nothing else worth waiting for."""
+        if not self._watching:
+            self._wake.wait(seconds)
+            return
+
+        before = self._creds_mtime()
+        deadline = time.monotonic() + seconds
+        while not self._stop:
+            left = deadline - time.monotonic()
+            if left <= 0:
+                return
+            if self._wake.wait(min(self.CREDS_POLL, left)):
+                return                       # refresh() or stop()
+            if self._creds_mtime() != before:
+                return
 
     def _since_ok(self) -> str | None:
         """Minutes since the last cycle that worked, for the log."""
@@ -106,15 +139,19 @@ class Poller(QThread):
         return self._interval * factor
 
     def _collect(self) -> Snapshot:
+        self._watching = False
         try:
             creds = credentials.load()
             if creds.expired:
-                # The timestamp is the one Claude Code itself refreshes against,
-                # so the request would come back 401. Skipping it saves a token
-                # and says what is actually wrong instead of quoting a status.
+                # Not a fault. The token lives eight hours and Claude Code
+                # only renews it while running, so an overnight gap ends here
+                # every time. Painting that red made the widget cry wolf about
+                # its own normal condition; it waits instead, and watches the
+                # file so it comes back seconds after you next use Claude Code.
                 self._idle = 0
+                self._watching = True
                 diag.record("expired", **diag.credentials_context())
-                return Snapshot(error=t("error.expired"), setup=signin.SIGNIN)
+                return Snapshot(error=t("error.waiting"), waiting=True)
         except credentials.CredentialsError as exc:
             # Two dead ends wear the same exception. "Run `claude` to sign in"
             # is wrong advice for someone who has never installed it, so the
