@@ -29,7 +29,7 @@ class Provider(ABC):
 
     key: str            # stored in settings; never shown
     label: str          # shown in the menu and the panel header
-    short: str          # for the widget's error column, which is 120px wide
+    short: str          # every message the widget's 120px error column shows
     help_url: str       # where someone with no credentials should be sent
     status_host: str    # the status page this agent's outages are reported on
 

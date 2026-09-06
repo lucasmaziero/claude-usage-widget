@@ -14,7 +14,7 @@ Watches **Claude Code** or **Codex**, one at a time, switched from the menu.
 [![Platform](https://img.shields.io/badge/platform-Windows%20%C2%B7%20macOS%20%C2%B7%20Linux-6e7681)](#installation)
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
-<img src="docs/widget.png" width="440" alt="Floating widget showing 41% of the 5-hour window">
+<img src="docs/shot-widget.png" width="440" alt="Floating widget showing 37% of the 5-hour window">
 
 <a href="https://lucasmaziero.github.io/agent-gauge/"><b>lucasmaziero.github.io/agent-gauge</b></a>
 
@@ -141,7 +141,7 @@ uv run agent-gauge       # or .\run.bat, which starts it without a console windo
 
 ## Usage
 
-<img src="docs/panel.png" width="380" align="right" alt="Expanded panel">
+<img src="docs/shot-panel-en.png" width="380" align="right" alt="Expanded panel">
 
 **Widget.** No number appears twice: the ring answers *how much of the 5-hour window is spent*, the
 `5h` row answers *how long until it resets* (with the reset clock on the right), and the `7d` row

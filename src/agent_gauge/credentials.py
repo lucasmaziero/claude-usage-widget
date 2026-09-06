@@ -76,7 +76,7 @@ def _read_raw(path: Path, agent: str) -> str:
         raise CredentialsError(t("error.unreadable", path=path, reason=exc)) from None
 
 
-def load(path: Path | None = None, agent: str = "Claude Code") -> Credentials:
+def load(path: Path | None = None, agent: str = "Claude") -> Credentials:
     """Parse the credentials. Failures come back translated: they are rendered
     in the widget, and they name the agent - this file is Claude Code's, but the
     messages are shared with providers that read somewhere else entirely."""

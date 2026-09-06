@@ -326,8 +326,31 @@ def ink(s: str, size: int, weight: QFont.Weight = QFont.Weight.Normal) -> tuple[
     return box.width(), box.height()
 
 
+ELLIPSIS = "…"
+
+
 def elide(s: str, limit: float, size: int,
           weight: QFont.Weight = QFont.Weight.Normal) -> str:
-    """Truncate with an ellipsis to fit `limit` at the given point size."""
-    return QFontMetricsF(font(size, weight)).elidedText(
+    """Truncate with an ellipsis to fit `limit`, backing off to a whole word.
+
+    Qt fills the width and stops wherever it lands, which for a sentence means
+    stopping inside a word: "sign in to Cla..." cuts the one word the reader
+    needed. Falling back to the last complete word costs a few pixels of
+    unused space and keeps the message readable.
+
+    Text with no spaces - a countdown, a percentage - has no word to fall back
+    to and comes out exactly as before.
+    """
+    cut = QFontMetricsF(font(size, weight)).elidedText(
         s, Qt.TextElideMode.ElideRight, int(limit))
+    if not cut.endswith(ELLIPSIS):
+        return cut                       # it fitted whole
+
+    head = cut[: -len(ELLIPSIS)]
+    stopped_mid_word = (head and not head[-1].isspace()
+                        and len(head) < len(s) and not s[len(head)].isspace())
+    if stopped_mid_word:
+        space = head.rstrip().rfind(" ")
+        if space > 0:
+            return head[:space].rstrip() + ELLIPSIS
+    return cut

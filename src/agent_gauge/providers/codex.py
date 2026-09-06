@@ -128,13 +128,13 @@ class Codex(Provider):
             raw = json.loads(path.read_text(encoding="utf-8"))
         except FileNotFoundError:
             raise CredentialsError(
-                t("error.no_credentials", agent=self.label, path=path)) from None
+                t("error.no_credentials", agent=self.short, path=path)) from None
         except (OSError, json.JSONDecodeError) as exc:
             raise CredentialsError(t("error.unreadable", path=path, reason=exc)) from None
 
         token = (raw.get("tokens") or {}).get("access_token")
         if not token:
-            raise CredentialsError(t("error.no_token", agent=self.label))
+            raise CredentialsError(t("error.no_token", agent=self.short))
 
         return Credentials(
             token=token,
@@ -165,7 +165,7 @@ class Codex(Provider):
                 exc.close()
                 if code == 401:
                     return Usage(ok=False, code=code,
-                                 error=t("error.unauthorized", agent=self.label))
+                                 error=t("error.unauthorized", agent=self.short))
                 return Usage(ok=False, code=code, error=t("error.no_headers", code=code))
             except (urllib.error.URLError, OSError) as exc:
                 problem = exc

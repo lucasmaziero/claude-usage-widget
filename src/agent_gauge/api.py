@@ -90,7 +90,7 @@ def parse(headers, code: int) -> Usage:
     if headers.get(H5U) is None and headers.get(D7U) is None:
         if code == 401:
             return Usage(ok=False, code=code,
-                         error=t("error.unauthorized", agent="Claude Code"))
+                         error=t("error.unauthorized", agent="Claude"))
         return Usage(ok=False, code=code, error=t("error.no_headers", code=code))
 
     return Usage(

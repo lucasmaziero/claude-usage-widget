@@ -221,3 +221,28 @@ def test_a_surface_accepts_having_nothing_to_show(qapp, settings, surface):
     view = FloatingWidget(settings) if surface == "widget" else Panel(settings)
     view.set_snapshot(None)
     assert not render(view).isNull()
+
+
+def test_elide_backs_off_to_a_whole_word(qapp, real_fonts):
+    """Qt fills the width and stops wherever it lands, which inside a sentence
+    means stopping inside a word - and the word it cut was usually the agent's
+    name, the one thing the reader needed."""
+    long = "sign in to Claude Code again - token refused (401)"
+    cut = paint.elide(long, 120, 9)
+
+    assert cut.endswith(paint.ELLIPSIS)
+    assert not cut[: -len(paint.ELLIPSIS)].endswith(" ")   # no dangling space
+    # what survives is whole words, not a fragment of one
+    assert all(word in long.split() for word in
+               cut[: -len(paint.ELLIPSIS)].split())
+
+
+def test_elide_leaves_a_single_token_alone(qapp, real_fonts):
+    """A countdown or a percentage has no word to fall back to, and must come
+    out exactly as Qt would have left it."""
+    for token in ("2h13", "100%", "1d22h"):
+        assert paint.elide(token, 200, 11) == token
+
+
+def test_elide_returns_short_text_untouched(qapp, real_fonts):
+    assert paint.elide("OK", 200, 9) == "OK"

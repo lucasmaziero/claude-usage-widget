@@ -60,6 +60,39 @@ def render(widget, scale: float = 1.0) -> QImage:
     return img
 
 
+def tray_strip(out_dir: Path, scale: float = 2.0,
+               percents: tuple[int, ...] = (6, 47, 83, 100)) -> None:
+    """The tray icon at four fills, on the dark strip a taskbar actually is.
+
+    The only doc image that keeps a background, and deliberately: the glyph is
+    drawn in whatever colour reads against the surface it sits on, so a
+    transparent PNG of it would be invisible against half the pages that embed
+    it. The ink is pinned rather than read from this machine's theme, so the
+    picture does not change depending on who regenerates it.
+    """
+    from agent_gauge import app as app_module
+
+    size, pad = 32, 22
+    width = len(percents) * (size + pad) + pad
+    height = size + pad * 2
+    sheet = QImage(int(width * scale), int(height * scale), QImage.Format.Format_ARGB32)
+    sheet.setDevicePixelRatio(scale)
+    sheet.fill(QColor(theme.SURFACE))
+
+    p = QPainter(sheet)
+    p.setRenderHint(QPainter.RenderHint.Antialiasing, True)
+    x = pad
+    for pct in percents:
+        icon = app_module.tray_pixmap(snapshot(pct, pct / 2), size, theme.TEXT)
+        p.drawPixmap(x, pad, icon)
+        x += size + pad
+    p.end()
+
+    out_dir.mkdir(parents=True, exist_ok=True)
+    sheet.save(str(out_dir / "tray.png"))
+    print(f"{out_dir / 'tray.png'} ({sheet.width()}x{sheet.height()} @{scale:g}x)")
+
+
 def shots(out_dir: Path, scale: float = 2.0) -> None:
     """The two surfaces as separate files, for the web page.
 
@@ -104,7 +137,9 @@ def main() -> None:
 
     if "--shots" in sys.argv:
         where = sys.argv[sys.argv.index("--shots") + 1:]
-        shots(Path(where[0]) if where else Path("docs"))
+        target = Path(where[0]) if where else Path("docs")
+        shots(target)
+        tray_strip(target)
         return
 
     out = Path(sys.argv[1] if len(sys.argv) > 1 else "preview.png")

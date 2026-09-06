@@ -14,7 +14,7 @@ Monitora **Claude Code** ou **Codex**, um de cada vez, alternando pelo menu.
 [![Plataforma](https://img.shields.io/badge/plataforma-Windows%20%C2%B7%20macOS%20%C2%B7%20Linux-6e7681)](#instalação)
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
-<img src="docs/widget.png" width="440" alt="Widget flutuante mostrando 41% da janela de 5 horas">
+<img src="docs/shot-widget.png" width="440" alt="Widget flutuante mostrando 37% da janela de 5 horas">
 
 <a href="https://lucasmaziero.github.io/agent-gauge/"><b>lucasmaziero.github.io/agent-gauge</b></a>
 
@@ -140,7 +140,7 @@ uv run agent-gauge       # ou .\run.bat, que sobe sem janela de console
 
 ## Uso
 
-<img src="docs/panel.png" width="380" align="right" alt="Painel expandido">
+<img src="docs/shot-panel-pt.png" width="380" align="right" alt="Painel expandido">
 
 **Widget.** Nenhum número aparece duas vezes: o anel responde *quanto já gastei da janela de 5h*, a
 linha `5h` responde *quanto falta para ela resetar* (com o horário do reset à direita) e a linha `7d`

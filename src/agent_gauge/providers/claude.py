@@ -24,7 +24,9 @@ class Claude(Provider):
         return paths.claude_dir()
 
     def credentials(self) -> Credentials:
-        return credentials.load(agent=self.label)
+        # The short name, because these land in the widget's error column:
+        # "faça login no Claude Code" is 139px against 120 available.
+        return credentials.load(agent=self.short)
 
     def fetch(self, creds: Credentials) -> api.Usage:
         return api.fetch_usage(creds.token)
