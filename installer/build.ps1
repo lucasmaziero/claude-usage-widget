@@ -32,6 +32,23 @@ $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
 Push-Location $root
 
+# Windows PowerShell 5.1 turns anything a native program writes to stderr into
+# a terminating error while ErrorActionPreference is 'Stop', however well the
+# program went. uv announces "Building claude-usage-widget" on stderr whenever
+# the version changed since the last run, so this script aborted on the icon
+# step of every release build and on none of the rebuilds in between.
+#
+# Exit codes are the truth for a native command, and every call below already
+# checks one, so they run with the preference relaxed and the check kept.
+function Invoke-Native {
+    param([Parameter(Mandatory)][scriptblock]$Command, [Parameter(Mandatory)][string]$What)
+
+    $previous = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+    try { & $Command } finally { $ErrorActionPreference = $previous }
+    if ($LASTEXITCODE -ne 0) { throw $What }
+}
+
 try {
     # The version lives in pyproject.toml; nothing else may declare it.
     $version = (Select-String -Path 'pyproject.toml' -Pattern '^version\s*=\s*"([^"]+)"').Matches[0].Groups[1].Value
@@ -43,13 +60,13 @@ try {
     }
 
     Write-Host '==> icon' -ForegroundColor Cyan
-    uv run python tools/gen_icon.py installer/claude-usage.ico
-    if ($LASTEXITCODE -ne 0) { throw 'icon generation failed' }
+    Invoke-Native { uv run python tools/gen_icon.py installer/claude-usage.ico } 'icon generation failed'
 
     Write-Host '==> frozen app' -ForegroundColor Cyan
-    uv run --extra build pyinstaller installer/claude-usage.spec `
-        --noconfirm --distpath build/dist --workpath build/work --log-level WARN
-    if ($LASTEXITCODE -ne 0) { throw 'pyinstaller failed' }
+    Invoke-Native {
+        uv run --extra build pyinstaller installer/claude-usage.spec `
+            --noconfirm --distpath build/dist --workpath build/work --log-level WARN
+    } 'pyinstaller failed'
 
     $exe = Join-Path $root 'build\dist\ClaudeUsage\ClaudeUsage.exe'
     if (-not (Test-Path $exe)) { throw "expected $exe" }
