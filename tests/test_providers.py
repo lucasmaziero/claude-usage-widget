@@ -283,13 +283,34 @@ def test_every_provider_has_its_own_mark(qapp):
     assert len(paths) == len(providers.ALL)
 
 
-def test_the_marks_share_one_geometry(qapp):
-    """Both drawings span y 5..20 of the viewBox, which is what lets one sizing
-    and centring calculation serve both."""
+@pytest.mark.parametrize("key", ["claude", "codex"])
+def test_a_mark_is_the_height_it_was_asked_for(qapp, key):
+    """The two fill different amounts of the viewBox - Clawd the y 5..20 band,
+    the Codex mark the whole 24 - so each carries its own ink height. Sizing
+    both as though they were Clawd made one of them half again too big."""
+    from agent_gauge import brand, theme
+
+    pixmap = brand.mark(key, 13, theme.ACCENT, 2.0)
+    image = pixmap.toImage()
+    rows = [y for y in range(image.height())
+            if any(image.pixelColor(x, y).alpha() > 8 for x in range(image.width()))]
+    ink = (rows[-1] - rows[0] + 1) / pixmap.devicePixelRatio()
+    assert abs(ink - 13) <= 1.0          # antialiasing, not layout
+
+
+def test_the_embedded_codex_path_matches_its_source(qapp):
+    """It is kept in installer/codex-mark.svg as provenance and embedded as a
+    string so PyInstaller has no data file to miss. The two must not drift, and
+    the first attempt at embedding it silently did: textwrap.wrap breaks on
+    whitespace and drops it, and in an SVG path the spaces are data."""
+    import re
+    from pathlib import Path
+
     from agent_gauge import brand
 
-    first = brand.mark("claude", 13)
-    assert brand.mark("codex", 13).size() == first.size()
+    source = Path(__file__).resolve().parents[1] / "installer" / "codex-mark.svg"
+    expected = re.search(r'\sd="([^"]+)"', source.read_text(encoding="utf-8")).group(1)
+    assert brand.MARKS["codex"].path == expected
 
 
 def test_an_unknown_key_still_draws_something(qapp):

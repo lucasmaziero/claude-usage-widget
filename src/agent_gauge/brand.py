@@ -12,6 +12,8 @@ Both are embedded as strings so there is no data file for PyInstaller to miss.
 """
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 from PySide6.QtCore import QByteArray, QRectF, Qt
 from PySide6.QtGui import QColor, QPainter, QPixmap
 from PySide6.QtSvg import QSvgRenderer
@@ -26,13 +28,26 @@ _CLAWD = (
     "488V8.102H6v2.847zm10.51 0H18V8.102h-1.49v2.847z"
 )
 
-# Ours. A blocky head on two feet with a single stub antenna: the terminal
-# creature a coding agent would be if it had a face. Straight edges only, so it
-# survives being drawn thirteen pixels tall next to Clawd without turning to
-# mush, and the eyes are holes in the same path so one fill colours all of it.
-_ROBIT = (
-    "M10.3 5h3.4v2.5H23v9.5h-3V20h-3.5v-2.9h-9V20H4v-2.9H1V7.5h9.3V5z"
-    "M5.7 10.3h3.1v3.4H5.7v-3.4zm9.5 0h3.1v3.4h-3.1v-3.4z"
+# The official Codex mark, kept verbatim from installer/codex-mark.svg. Used the
+# same way Clawd is: to say whose numbers are on screen. Neither is this
+# project's own mark - the app's is the gauge, in tools/gen_icon.py.
+_CODEX = (
+    "M8.086.457a6.105 6.105 0 013.046-.415c1.333.153 2.521.72 3.564 1.7a.117."
+    "117 0 00.107.029c1.408-.346 2.762-.224 4.061.366l.063.03.154.076c1.357.7"
+    "03 2.33 1.77 2.918 3.198.278.679.418 1.388.421 2.126a5.655 5.655 0 01-.1"
+    "8 1.631.167.167 0 00.04.155 5.982 5.982 0 011.578 2.891c.385 1.901-.01 3"
+    ".615-1.183 5.14l-.182.22a6.063 6.063 0 01-2.934 1.851.162.162 0 00-.108."
+    "102c-.255.736-.511 1.364-.987 1.992-1.199 1.582-2.962 2.462-4.948 2.451-"
+    "1.583-.008-2.986-.587-4.21-1.736a.145.145 0 00-.14-.032c-.518.167-1.04.1"
+    "91-1.604.185a5.924 5.924 0 01-2.595-.622 6.058 6.058 0 01-2.146-1.781c-."
+    "203-.269-.404-.522-.551-.821a7.74 7.74 0 01-.495-1.283 6.11 6.11 0 01-.0"
+    "17-3.064.166.166 0 00.008-.074.115.115 0 00-.037-.064 5.958 5.958 0 01-1"
+    ".38-2.202 5.196 5.196 0 01-.333-1.589 6.915 6.915 0 01.188-2.132c.45-1.4"
+    "84 1.309-2.648 2.577-3.493.282-.188.55-.334.802-.438.286-.12.573-.22.861"
+    "-.304a.129.129 0 00.087-.087A6.016 6.016 0 015.635 2.31C6.315 1.464 7.13"
+    "2.846 8.086.457zm-.804 7.85a.848.848 0 00-1.473.842l1.694 2.965-1.688 2."
+    "848a.849.849 0 001.46.864l1.94-3.272a.849.849 0 00.007-.854l-1.94-3.393z"
+    "m5.446 6.24a.849.849 0 000 1.695h4.848a.849.849 0 000-1.696h-4.848z"
 )
 
 _SVG = (
@@ -40,10 +55,28 @@ _SVG = (
     '<path clip-rule="evenodd" fill-rule="evenodd" fill="{fill}" d="{path}"/></svg>'
 )
 
-MARKS = {"claude": _CLAWD, "codex": _ROBIT}
+
+@dataclass(frozen=True)
+class Mark:
+    """One agent's mark, and how much of the viewBox its ink actually fills.
+
+    The height matters because the two differ: Clawd is drawn in the y 5..20
+    band and the Codex mark fills the whole 24, both measured rather than read
+    off the file. Sizing every mark as though it filled the box would have made
+    Clawd two thirds the height it was asked for; sizing them all as though they
+    were Clawd would have made Codex half again too big.
+    """
+
+    path: str
+    ink_height: float
+
+
+MARKS = {
+    "claude": Mark(_CLAWD, 15.0),
+    "codex": Mark(_CODEX, 24.0),
+}
 FALLBACK = "claude"
 
-_INK_HEIGHT = 15.0      # both drawings span y 5..20 of the 24-unit viewBox
 _VIEWBOX = 24.0
 
 _cache: dict[tuple[str, int, str, float], QPixmap] = {}
@@ -62,13 +95,13 @@ def mark(key: str, height: int, color: QColor = theme.ACCENT,
     if cache_key in _cache:
         return _cache[cache_key]
 
-    box = height * _VIEWBOX / _INK_HEIGHT
+    chosen = MARKS.get(key, MARKS[FALLBACK])
+    box = height * _VIEWBOX / chosen.ink_height
     pm = QPixmap(int(box * dpr), int(box * dpr))
     pm.setDevicePixelRatio(dpr)
     pm.fill(Qt.GlobalColor.transparent)
 
-    path = MARKS.get(key, MARKS[FALLBACK])
-    svg = _SVG.format(fill=color.name(), path=path)
+    svg = _SVG.format(fill=color.name(), path=chosen.path)
     renderer = QSvgRenderer(QByteArray(svg.encode()))
     p = QPainter(pm)
     p.setRenderHint(QPainter.RenderHint.Antialiasing, True)
