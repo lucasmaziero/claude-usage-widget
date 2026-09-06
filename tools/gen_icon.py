@@ -35,6 +35,8 @@ from agent_gauge import paint, theme
 # Sizes Windows actually asks for: tray, taskbar, list views, tiles.
 SIZES = (16, 20, 24, 32, 40, 48, 64, 128, 256)
 PNG_FROM = 64          # below this Windows is happiest with a plain DIB
+PLATE_FROM = 24        # below this the plate is dropped; see render()
+ARC_PCT = 72.0         # far enough round to read as a measurement
 
 # What iconutil reads. The @2x entries are a larger render under a smaller
 # name, which is exactly what a Retina display asks for.
@@ -67,23 +69,28 @@ def render(size: int) -> QImage:
     p = QPainter(img)
     p.setRenderHint(QPainter.RenderHint.Antialiasing, True)
 
-    inset = max(size * 0.02, 0.5)
-    plate = QPainterPath()
-    plate.addRoundedRect(QRectF(inset, inset, size - inset * 2, size - inset * 2),
-                         size * 0.22, size * 0.22)
-    # SURFACE2 rather than SURFACE: against a dark taskbar the darker plate
-    # vanished and left the arc floating with no body to sit on.
-    p.fillPath(plate, QColor(theme.SURFACE2))
+    if size >= PLATE_FROM:
+        inset = max(size * 0.02, 0.5)
+        plate = QPainterPath()
+        plate.addRoundedRect(QRectF(inset, inset, size - inset * 2, size - inset * 2),
+                             size * 0.22, size * 0.22)
+        # SURFACE2 rather than SURFACE: against a dark taskbar the darker plate
+        # vanished and left the arc floating with no body to sit on.
+        p.fillPath(plate, QColor(theme.SURFACE2))
+        radius, thickness = size * 0.28, max(size * 0.17, 2.2)
+    else:
+        # Sixteen pixels is not enough for a plate and a ring inside it: the
+        # plate took the square and left the gauge a coral scratch. Below that,
+        # the ring is the whole icon. Same rule the tray icon follows - a size
+        # drawn for its size beats a large one shrunk.
+        radius, thickness = size * 0.36, max(size * 0.20, 2.6)
 
     # A ring with a gap and nothing behind it reads as a loading spinner. The
     # full track behind it is what makes it a gauge - something measured against
-    # a whole - so it is drawn brighter than the widget's own track, which has a
-    # dark card to sit on and this does not.
-    radius = size * 0.29
-    thickness = max(size * 0.135, 1.8)
+    # a whole.
     center = QPointF(size / 2, size / 2)
     paint.ring(p, center, radius, thickness, 100.0, color=theme.BORDER, track=None)
-    paint.ring(p, center, radius, thickness, 72.0, color=theme.ACCENT, track=None)
+    paint.ring(p, center, radius, thickness, ARC_PCT, color=theme.ACCENT, track=None)
     p.end()
     return img
 
