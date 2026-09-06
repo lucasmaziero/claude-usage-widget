@@ -271,3 +271,28 @@ def test_the_poller_asks_whichever_provider_it_holds(monkeypatch):
     snap = Poller(120, Fake())._collect()
     assert snap.usage.h5 == 7
     assert snap.subscription == "pro"        # the plan the reading carried
+
+
+# ------------------------------------------------------------------- marks
+def test_every_provider_has_its_own_mark(qapp):
+    """The mark is the only thing on the widget that says whose numbers these
+    are - the ring and the rows look identical either way."""
+    from claude_usage import brand
+
+    paths = {brand.MARKS[p.key] for p in providers.ALL}
+    assert len(paths) == len(providers.ALL)
+
+
+def test_the_marks_share_one_geometry(qapp):
+    """Both drawings span y 5..20 of the viewBox, which is what lets one sizing
+    and centring calculation serve both."""
+    from claude_usage import brand
+
+    first = brand.mark("claude", 13)
+    assert brand.mark("codex", 13).size() == first.size()
+
+
+def test_an_unknown_key_still_draws_something(qapp):
+    from claude_usage import brand
+
+    assert not brand.mark("gemini", 13).isNull()

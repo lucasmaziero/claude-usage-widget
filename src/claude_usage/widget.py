@@ -20,7 +20,7 @@ from PySide6.QtCore import QPoint, QPointF, QRectF, Qt, QTimer, Signal
 from PySide6.QtGui import QColor, QFont, QPainter
 from PySide6.QtWidgets import QWidget
 
-from . import brand, paint, theme
+from . import brand, paint, providers, theme
 from .i18n import t
 from .poller import Snapshot
 from .theme import LG, SM
@@ -240,14 +240,17 @@ class FloatingWidget(QWidget):
         p.end()
 
     def _paint_mascot(self, p: QPainter, card: QRectF, snap: Snapshot | None) -> None:
-        """Clawd as a badge in the top-right corner, over the menu column.
+        """The watched agent's mark, as a badge in the top-right corner.
 
-        He goes gray when a fetch failed or an incident is open, the same signal
-        the panel header gives.
+        It goes gray when a fetch failed or an incident is open, the same signal
+        the panel header gives, and it is the only thing on the widget that says
+        which agent these numbers belong to - the rows and the ring look
+        identical either way.
         """
         unwell = bool(snap and (snap.error or snap.incidents))
-        icon = brand.clawd(MASCOT_PT, theme.FAINT if unwell else theme.ACCENT,
-                           self.devicePixelRatioF())
+        key = providers.get(str(self.settings["provider"])).key
+        icon = brand.mark(key, MASCOT_PT, theme.FAINT if unwell else theme.ACCENT,
+                          self.devicePixelRatioF())
         w = icon.width() / icon.devicePixelRatio()
         p.drawPixmap(QPointF(card.right() - MENU_W / 2 - w / 2, card.top() + SM), icon)
 

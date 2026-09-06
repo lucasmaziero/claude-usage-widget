@@ -135,18 +135,16 @@ class Panel(QWidget):
         head = QRectF(PAD, HEAD_Y, COL, 20)
         provider = providers.get(str(self.settings["provider"]))
 
-        # The mascot is Claude Code's mark, so it appears only when that is what
-        # is being watched. Under another agent's name it would be a lie about
-        # whose numbers these are - which is the one thing the header must not
-        # get wrong once there is more than one source.
-        offset = 0.0
-        if provider.key == "claude":
-            unwell = bool(snap and (snap.error or snap.incidents))
-            icon = brand.clawd(13, theme.FAINT if unwell else theme.ACCENT,
-                               self.devicePixelRatioF())
-            icon_h = icon.height() / icon.devicePixelRatio()
-            p.drawPixmap(QPointF(PAD, head.center().y() - icon_h / 2), icon)
-            offset = icon.width() / icon.devicePixelRatio() + SM
+        # Each agent wears its own mark, and the mark goes gray with the same
+        # signal as before. Which one is drawn is the header's way of saying
+        # whose numbers these are, so it follows the selection rather than the
+        # app: Clawd over Codex's percentages would be a lie about the source.
+        unwell = bool(snap and (snap.error or snap.incidents))
+        icon = brand.mark(provider.key, 13, theme.FAINT if unwell else theme.ACCENT,
+                          self.devicePixelRatioF())
+        icon_h = icon.height() / icon.devicePixelRatio()
+        p.drawPixmap(QPointF(PAD, head.center().y() - icon_h / 2), icon)
+        offset = icon.width() / icon.devicePixelRatio() + SM
 
         paint.text(p, head.adjusted(offset, 0, 0, 0), provider.label.upper(),
                    theme.TEXT, 9, QFont.Weight.DemiBold, spacing=1.2)
