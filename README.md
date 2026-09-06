@@ -45,6 +45,11 @@ smallest request that exists - a `POST /v1/messages` with `max_tokens: 1` - pure
 quota, no token spent. `backend-api/wham/usage` returns `primary_window` and `secondary_window`
 with the same percentages and resets, plus the plan name.
 
+One thing it does not return is Anthropic's `representative-claim`, the server's own answer to
+which window binds first. So the panel simply does not say, for Codex, until `limit_reached_type`
+reports that one has actually been hit. Which window binds is a claim about the future, and two
+percentages cannot support one.
+
 That endpoint is the one caveat worth stating plainly: it belongs to the ChatGPT web backend and is
 not a published API. It has no contract and no deprecation policy, so the day its shape changes
 this half stops working. Every field is read defensively, and a reply that does not carry the two

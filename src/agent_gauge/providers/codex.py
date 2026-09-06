@@ -66,6 +66,33 @@ def _window(block: dict) -> tuple[float, int]:
     return percent, int(reset or 0)
 
 
+def _claim(data: dict) -> str:
+    """Which window is the binding one, or "" for no opinion.
+
+    Anthropic publishes this per reply, as representative-claim. This API does
+    not: the only thing close is rate_limit_reached_type, which stays null until
+    a limit is actually hit, so most of the time the honest answer is silence.
+
+    It said "seven_day" whenever the weekly percentage merely exceeded the
+    five-hour one, which put "hits the ceiling first" on the panel at 3% of a
+    week - a claim about the future read off two numbers that cannot support
+    one. Which window binds depends on burn rate against time remaining, and
+    nothing here measures the weekly rate.
+
+    The vocabulary below is a guess, because the field is null on a healthy
+    account and there was nothing to read. Anything unrecognised falls through
+    to no claim, which is the same as saying nothing.
+    """
+    reached = str(data.get("rate_limit_reached_type") or "").lower()
+    if not reached:
+        return ""
+    if "second" in reached or "week" in reached:
+        return "seven_day"
+    if "primary" in reached or "hour" in reached:
+        return "five_hour"
+    return ""
+
+
 class Codex(Provider):
     key = "codex"
     label = "Codex"
@@ -164,7 +191,7 @@ class Codex(Provider):
             h5=h5, d7=d7,
             h5_reset=h5_reset, d7_reset=d7_reset,
             status_overall="rejected" if blocked else "allowed",
-            claim="seven_day" if d7 > h5 else "five_hour",
+            claim=_claim(data),
             plan=str(data.get("plan_type") or ""),
             code=200,
             ok=True,

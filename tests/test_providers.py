@@ -359,3 +359,29 @@ def test_an_unknown_key_still_draws_something(qapp):
     from agent_gauge import brand
 
     assert not brand.mark("gemini", 13).isNull()
+
+
+# ---------------------------------------------------------------- the claim
+def test_a_healthy_account_makes_no_claim(monkeypatch, codex_home):
+    """"Hits the ceiling first" is a statement about the future. It used to be
+    derived from d7 > h5, which put it on the panel at 3% of a weekly window -
+    two percentages cannot support that claim, and this API does not publish one
+    the way Anthropic's does."""
+    write_auth(codex_home)
+    answer(monkeypatch, USAGE)
+    assert CODEX.fetch(CODEX.credentials()).claim == ""
+
+
+@pytest.mark.parametrize("reached,expected", [
+    ("secondary_window", "seven_day"),
+    ("weekly", "seven_day"),
+    ("primary_window", "five_hour"),
+    ("5_hour", "five_hour"),
+    ("something_new", ""),          # an unknown word says nothing, not a guess
+    (None, ""),
+])
+def test_a_claim_is_only_made_when_a_limit_was_reached(
+        monkeypatch, codex_home, reached, expected):
+    write_auth(codex_home)
+    answer(monkeypatch, {**USAGE, "rate_limit_reached_type": reached})
+    assert CODEX.fetch(CODEX.credentials()).claim == expected

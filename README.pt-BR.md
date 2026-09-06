@@ -45,6 +45,11 @@ a menor requisição que existe — um `POST /v1/messages` com `max_tokens: 1` �
 cota, nenhum token gasto. O `backend-api/wham/usage` devolve `primary_window` e `secondary_window`
 com as mesmas porcentagens e resets, mais o nome do plano.
 
+Uma coisa ele não devolve: o `representative-claim` da Anthropic, a resposta do próprio servidor
+sobre qual janela é o gargalo. Então, no Codex, o painel simplesmente não diz — até o
+`limit_reached_type` informar que uma delas foi de fato atingida. Qual janela morde primeiro é uma
+afirmação sobre o futuro, e duas porcentagens não sustentam uma.
+
 Esse endpoint é a única ressalva que vale dizer sem rodeios: ele pertence ao backend web do ChatGPT
 e não é API publicada. Não tem contrato nem política de depreciação, então no dia em que mudar de
 formato essa metade para de funcionar. Cada campo é lido defensivamente, e uma resposta que não
