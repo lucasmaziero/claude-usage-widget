@@ -206,3 +206,18 @@ def test_clawd_is_cached_per_size_and_color(qapp):
     assert first is brand.clawd(13, theme.ACCENT)
     assert first is not brand.clawd(13, theme.FAINT)
     assert not first.isNull()
+
+
+@pytest.mark.parametrize("surface", ["widget", "panel"])
+def test_a_surface_accepts_having_nothing_to_show(qapp, settings, surface):
+    """None is a real state, not a mistake: it is what the app is in before the
+    first cycle and again the moment the user switches agents.
+
+    The widget's tooltip did not accept it, so switching raised inside the menu
+    handler - before the line that told the poller. Qt swallowed that into
+    stderr, and the visible result was an app whose label changed while its
+    numbers went on coming from the agent the user had just left.
+    """
+    view = FloatingWidget(settings) if surface == "widget" else Panel(settings)
+    view.set_snapshot(None)
+    assert not render(view).isNull()

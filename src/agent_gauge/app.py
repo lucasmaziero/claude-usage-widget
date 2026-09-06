@@ -376,12 +376,21 @@ class App(QObject):
     def _set_provider(self, key: str) -> None:
         """Switch which agent is watched. The old snapshot goes with it: leaving
         one agent's numbers on screen under another's name is the one thing this
-        must never do."""
+        must never do.
+
+        The poller is told first, and deliberately. This method used to end with
+        that line, after four calls that repaint the UI - and one of them raised,
+        so the setting changed, the label changed, and the poller went on reading
+        the agent the user had just switched away from. Qt swallowed the
+        exception into stderr, which a windowed app has nobody watching.
+        """
         if key == self.provider.key:
             return
+        self.provider = providers.get(key)
+        self.poller.set_provider(self.provider)
+
         self.settings["provider"] = key
         self.settings.save()
-        self.provider = providers.get(key)
 
         self.snap = None
         self._alerted_for = -1
@@ -389,7 +398,6 @@ class App(QObject):
         self.panel.set_snapshot(None)
         self.tray.setIcon(tray_icon(None))
         self.tray.setToolTip(t("tray.collecting"))
-        self.poller.set_provider(self.provider)
 
     def _set_interval(self, seconds: int) -> None:
         self.settings["poll_sec"] = seconds

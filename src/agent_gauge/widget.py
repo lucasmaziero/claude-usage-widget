@@ -179,7 +179,9 @@ class FloatingWidget(QWidget):
         return QRectF(card.right() - MENU_W, card.bottom() - ICON_HIT, MENU_W, ICON_HIT)
 
     # ------------------------------------------------------------------ data
-    def set_snapshot(self, snap: Snapshot) -> None:
+    def set_snapshot(self, snap: Snapshot | None) -> None:
+        """None means "nothing to show yet", which is a real state: it is what
+        the app is in before the first cycle and again after switching agents."""
         self.snap = snap
         self.setToolTip(self._tooltip(snap))
         self.update()
@@ -200,7 +202,9 @@ class FloatingWidget(QWidget):
         self._spin = (self._spin + SPIN_STEP) % 360.0
         self.update()
 
-    def _tooltip(self, snap: Snapshot) -> str:
+    def _tooltip(self, snap: Snapshot | None) -> str:
+        if snap is None:
+            return t("tray.collecting")
         if not snap.ok:
             return t("widget.tooltip_error", error=snap.error or t("widget.no_data"))
         u, now = snap.usage, time.time()
