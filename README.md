@@ -1,20 +1,22 @@
 <div align="center">
 
-# Claude Usage Widget
+# Agent Gauge
 
-**Your Claude Code limits, on a floating desktop widget.**
+**Your coding agent's limits, on a floating desktop widget.**
+
+Watches **Claude Code** or **Codex**, one at a time, switched from the menu.
 
 **English** · [Português](README.pt-BR.md)
 
-[![CI](https://github.com/lucasmaziero/claude-usage-widget/actions/workflows/ci.yml/badge.svg)](https://github.com/lucasmaziero/claude-usage-widget/actions/workflows/ci.yml)
-[![Release](https://img.shields.io/github/v/release/lucasmaziero/claude-usage-widget)](https://github.com/lucasmaziero/claude-usage-widget/releases/latest)
+[![CI](https://github.com/lucasmaziero/agent-gauge/actions/workflows/ci.yml/badge.svg)](https://github.com/lucasmaziero/agent-gauge/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/lucasmaziero/agent-gauge)](https://github.com/lucasmaziero/agent-gauge/releases/latest)
 [![Python](https://img.shields.io/badge/python-3.11+-3776ab)](https://www.python.org)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%C2%B7%20macOS%20%C2%B7%20Linux-6e7681)](#installation)
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
 <img src="docs/widget.png" width="440" alt="Floating widget showing 41% of the 5-hour window">
 
-<a href="https://lucasmaziero.github.io/claude-usage-widget/"><b>lucasmaziero.github.io/claude-usage-widget</b></a>
+<a href="https://lucasmaziero.github.io/agent-gauge/"><b>lucasmaziero.github.io/agent-gauge</b></a>
 
 </div>
 
@@ -22,9 +24,15 @@
 
 ## How it works
 
-The Anthropic API exposes no usage endpoint for subscription accounts. Utilization rides along in
-the `anthropic-ratelimit-unified-*` headers of any response, so the widget sends the smallest
-request it can, a `POST /v1/messages` with `max_tokens: 1`, purely to read them:
+Both agents meter the same two things: a rolling **five-hour** window and a **weekly** one, at
+18000 and 604800 seconds exactly, each reported as a percentage with a reset time. That is the
+whole gauge, and it is why one widget can wear either without redrawing anything.
+
+Where they differ is in what a reading costs.
+
+**Claude Code.** Anthropic publishes no usage endpoint for subscription accounts. Utilization rides
+along in the `anthropic-ratelimit-unified-*` headers of any response, so the widget sends the
+smallest request that exists - a `POST /v1/messages` with `max_tokens: 1` - purely to read them:
 
 | Header | Becomes |
 | --- | --- |
@@ -33,28 +41,45 @@ request it can, a `POST /v1/messages` with `max_tokens: 1`, purely to read them:
 | `unified-5h-reset` / `unified-7d-reset` | clock and countdown for each reset |
 | `unified-status` / `representative-claim` | status chip, and which window binds |
 
-Two things follow from the app running on the **same machine** as Claude Code:
+**Codex.** There is a usage endpoint, so a reading costs nothing at all: no request against your
+quota, no token spent. `backend-api/wham/usage` returns `primary_window` and `secondary_window`
+with the same percentages and resets, plus the plan name.
 
-- **Nothing to configure.** The OAuth token comes from wherever Claude Code itself put it, re-read
-  on every cycle: `~/.claude/.credentials.json` on Windows and Linux, the login keychain on macOS.
-  When Claude Code refreshes the token, the widget follows on its own.
-- **Real token counts.** The headers only carry percentages; the absolute numbers exist only in the
-  transcripts under `~/.claude/projects/**/*.jsonl`, which are read straight off the disk.
+That endpoint is the one caveat worth stating plainly: it belongs to the ChatGPT web backend and is
+not a published API. It has no contract and no deprecation policy, so the day its shape changes
+this half stops working. Every field is read defensively, and a reply that does not carry the two
+windows is reported as a failed reading rather than guessed at - a gauge confidently showing zero
+would be worse than one admitting it does not know.
+
+Two things follow from the app running on the **same machine** as the agent:
+
+- **Nothing to configure.** The token comes from wherever the agent itself put it, re-read every
+  cycle: `~/.claude/.credentials.json` on Windows and Linux and the login keychain on macOS for
+  Claude Code, `~/.codex/auth.json` for Codex. When the agent refreshes it, the widget follows.
+- **Real token counts, where they exist.** The percentages are all either API carries. Claude Code
+  writes transcripts under `~/.claude/projects/**/*.jsonl` and those absolute numbers are read
+  straight off the disk. Codex keeps its history in SQLite with no usage totals in it, so that line
+  of the panel is empty rather than wrong.
+
+Nothing is refreshed on your behalf. Both agents rotate their own tokens while they run, and both
+carry a refresh token this could spend - but refresh tokens are commonly single-use with rotation,
+so spending one could leave the agent holding an invalid token and log you out of it. That is a
+disproportionate way to lose a gauge reading.
 
 ## Installation
 
 Every download is on the [releases page][releases], each with a SHA-256 beside it. All three builds
 are unsigned, so each OS objects in its own way; the notes below say how to get past it.
 
-Whichever you pick, Claude Code has to have been signed in on the machine (`claude` once). Without
-it the widget shows `run claude once to sign in` instead of a number.
+Whichever you pick, the agent you want to watch has to have been signed in on the machine. Without
+it the widget says so and offers the setup page for that agent rather than a number.
 
-[releases]: https://github.com/lucasmaziero/claude-usage-widget/releases/latest
+[releases]: https://github.com/lucasmaziero/agent-gauge/releases/latest
 
 ### Windows
 
-`ClaudeUsage-<version>.exe`, double-clicked. The install is **per user**, into
-`%LOCALAPPDATA%\Programs\Claude Usage Widget`. No admin, no UAC prompt. The wizard offers a desktop
+`AgentGauge-<version>.exe`, double-clicked. The install is **per user**, into
+`%LOCALAPPDATA%\Programs\Agent Gauge`. No admin, no UAC prompt. The wizard offers a desktop
 shortcut and starting with Windows, both optional. It uninstalls from **Installed apps** like any
 program, asking first whether to remove your preferences too.
 
@@ -62,7 +87,7 @@ Unsigned, so SmartScreen warns about an "unknown publisher" on the first downloa
 
 ### macOS
 
-`ClaudeUsage-<version>-arm64.dmg` for Apple Silicon, `-x86_64` for Intel. Open it and drag the app
+`AgentGauge-<version>-arm64.dmg` for Apple Silicon, `-x86_64` for Intel. Open it and drag the app
 to Applications. It has no Dock icon by design (`LSUIElement`): the menu bar and the floating widget
 are the whole interface.
 
@@ -71,7 +96,7 @@ launch. Right-click the app and choose **Open**, which offers the override a dou
 or:
 
 ```bash
-xattr -dr com.apple.quarantine "/Applications/Claude Usage Widget.app"
+xattr -dr com.apple.quarantine "/Applications/Agent Gauge.app"
 ```
 
 The first poll opens a keychain prompt, because on macOS the token lives there rather than in a
@@ -79,11 +104,11 @@ file. Choose **Always Allow** and it is never asked again.
 
 ### Linux
 
-`ClaudeUsage-<version>.AppImage`, marked executable and run:
+`AgentGauge-<version>.AppImage`, marked executable and run:
 
 ```bash
-chmod +x ClaudeUsage-*.AppImage
-./ClaudeUsage-*.AppImage
+chmod +x AgentGauge-*.AppImage
+./AgentGauge-*.AppImage
 ```
 
 Two desktop caveats worth knowing before filing a bug:
@@ -101,12 +126,12 @@ Works on all three, and is the only route on an architecture without a build.
 
 ```bash
 uv sync
-uv run claude-usage       # ./run.sh detaches it from the terminal
+uv run agent-gauge       # ./run.sh detaches it from the terminal
 ```
 
 ```powershell
 uv sync
-uv run claude-usage       # or .\run.bat, which starts it without a console window
+uv run agent-gauge       # or .\run.bat, which starts it without a console window
 ```
 
 ## Usage
@@ -142,6 +167,12 @@ extensions write it without ever installing a CLI, and a PATH check would tell a
 had never installed anything. Nothing is installed for you: piping an install script into a shell on
 someone's behalf is not a thing a usage widget should do.
 
+**Switching agents.** One at a time, from **Watching** in the menu. The panel header names the
+one in view and wears its mark - Claude Code's or Codex's own - because the ring and the rows look
+identical either way, and a mark over the wrong numbers would be the one thing this must not get
+wrong. Switching drops the snapshot, the alert state and the burn-rate history: a rate mixing two
+agents' windows would be a fiction. The app's own mark is neither of theirs; it is the gauge.
+
 **Tray.** The icon is the ring with the number inside, drawn one size at a time so the shell never
 has to shrink it, including the in-between sizes display scaling asks for (25px at 125%). The
 tooltip carries both windows.
@@ -172,6 +203,7 @@ basis for the second claim.
 | Compact mode | Shrinks the widget to the ring |
 | Lock position | Ignores dragging |
 | Interval | 30 s to 15 min, 2 min by default; a floor, not a fixed cadence |
+| Watching | Claude Code or Codex; switching clears what belonged to the other |
 | Alert at | Notify once per window at this percent, 80% by default; Off turns it off |
 | Language | Automatic, Português, English |
 | Start with *&lt;your OS&gt;* | Named after the system it is running on; one mechanism each, see below |
@@ -184,9 +216,9 @@ the record of failed cycles:
 
 | | Autostart | Preferences |
 | --- | --- | --- |
-| Windows | `HKCU\...\CurrentVersion\Run` | `%APPDATA%\ClaudeUsageWidget\settings.json` |
-| macOS | `~/Library/LaunchAgents/com.lucasmaziero.claude-usage-widget.plist` | `~/Library/Application Support/ClaudeUsageWidget/settings.json` |
-| Linux | `~/.config/autostart/claude-usage-widget.desktop` | `$XDG_CONFIG_HOME/claude-usage-widget/settings.json` |
+| Windows | `HKCU\...\CurrentVersion\Run` | `%APPDATA%\AgentGauge\settings.json` |
+| macOS | `~/Library/LaunchAgents/com.lucasmaziero.agent-gauge.plist` | `~/Library/Application Support/AgentGauge/settings.json` |
+| Linux | `~/.config/autostart/agent-gauge.desktop` | `$XDG_CONFIG_HOME/agent-gauge/settings.json` |
 
 All three are per user: none needs admin, and none writes outside your home directory.
 
@@ -200,14 +232,14 @@ It is not only labels: the weekday (`Fri` / `sex`), the decimal mark (`6.0M` / `
 plural of sessions follow the language too. Translating labels while the numbers stay in one locale
 reads half converted, which is worse than not translating at all.
 
-Strings live in `src/claude_usage/i18n.py`, one dictionary per language. Adding a language means
+Strings live in `src/agent_gauge/i18n.py`, one dictionary per language. Adding a language means
 copying the English dictionary, translating the values and registering it in `LANGUAGES`; a test
 keeps the keys and the `{format}` fields in step across every language.
 
 ## Layout
 
 ```
-src/claude_usage/   application code    tests/       test suite
+src/agent_gauge/   application code    tests/       test suite
 installer/          packaging           tools/       icon and preview generators
 ```
 
@@ -216,6 +248,7 @@ installer/          packaging           tools/       icon and preview generators
 | `paths.py` | Where each OS keeps the credentials, transcripts and preferences |
 | `credentials.py` | Reads Claude Code's OAuth token, from a file or the macOS keychain |
 | `autostart.py` | Start with the session: Run key, LaunchAgent or .desktop entry |
+| `providers/` | One `Provider` per agent: credentials, fetch, incidents, token totals |
 | `signin.py` | Tells the two no-token dead ends apart and opens the setup page |
 | `diag.py` | A bounded log of failed cycles, written only when one fails |
 | `release.py` | Reads the latest published tag and compares it with this build |
@@ -235,10 +268,10 @@ installer/          packaging           tools/       icon and preview generators
 
 ```powershell
 uv sync                                           # creates the .venv with the dev group
-uv run pytest                                     # 192 tests, no network, no windows
+uv run pytest                                     # 228 tests, no network, no windows
 uv run ruff check .                               # lint (rules in pyproject.toml)
 uv run python tools/preview.py docs/preview.png   # offline render of both surfaces
-$env:CLAUDE_USAGE_DEBUG=1; uv run claude-usage    # prints every cycle to the console
+$env:AGENT_GAUGE_DEBUG=1; uv run agent-gauge    # prints every cycle to the console
 ```
 
 The render tests use `QT_QPA_PLATFORM=offscreen` (see `tests/conftest.py`) and check that every
@@ -273,7 +306,7 @@ uv run python tools/measure_font.py path\to\Inter.ttf    # a file, nothing insta
 
 It runs the same twelve checks the tests do and prints the numbers. A font file is loaded into that
 process only, through `QFontDatabase`, so measuring a face does not mean installing it. The same
-switch is available at runtime: `CLAUDE_USAGE_FONT` pins a family, for a desktop whose default
+switch is available at runtime: `AGENT_GAUGE_FONT` pins a family, for a desktop whose default
 measures badly.
 
 What that turned up:
@@ -321,9 +354,9 @@ freezes the interpreter and the Qt libraries of the machine it runs on.
 
 | Platform | Needs | Produces |
 | --- | --- | --- |
-| Windows | Inno Setup (`winget install JRSoftware.InnoSetup`) | `build/ClaudeUsage-<version>.exe`, ~21 MB from 70 MB installed |
-| macOS | Xcode command line tools, for `iconutil`, `codesign` and `hdiutil` | `build/ClaudeUsage-<version>-<arch>.dmg` |
-| Linux | `appimagetool`, downloaded on first run | `build/ClaudeUsage-<version>.AppImage` |
+| Windows | Inno Setup (`winget install JRSoftware.InnoSetup`) | `build/AgentGauge-<version>.exe`, ~21 MB from 70 MB installed |
+| macOS | Xcode command line tools, for `iconutil`, `codesign` and `hdiutil` | `build/AgentGauge-<version>-<arch>.dmg` |
+| Linux | `appimagetool`, downloaded on first run | `build/AgentGauge-<version>.AppImage` |
 
 Every run leaves **exactly one** artifact in `build/`, the one just built: keeping old versions side
 by side is how the wrong file gets shipped.
@@ -332,8 +365,8 @@ by side is how the wrong file gets shipped.
 | --- | --- |
 | `installer/build.ps1` | Windows: the three steps, version read from `pyproject.toml` |
 | `installer/build.sh` | macOS and Linux: the same three steps, plus signing and packaging |
-| `installer/claude-usage.spec` | PyInstaller, shared: onedir, no console, per-OS icon and metadata |
-| `installer/claude-usage.iss` | Inno Setup: per-user install, shortcuts, autostart, uninstaller |
+| `installer/agent-gauge.spec` | PyInstaller, shared: onedir, no console, per-OS icon and metadata |
+| `installer/agent-gauge.iss` | Inno Setup: per-user install, shortcuts, autostart, uninstaller |
 | `installer/entry.py` | Frozen entry point (`__main__.py` uses a relative import) |
 | `tools/gen_icon.py` | `.ico`, `.iconset` or a hicolor tree, chosen by the output path |
 | `tools/measure_font.py` | Runs the layout's geometry checks against any font |

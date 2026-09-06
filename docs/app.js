@@ -1,4 +1,4 @@
-/* Claude Usage Widget - landing page behaviour.
+/* Agent Gauge - landing page behaviour.
  *
  * Three jobs, in order of how much they matter:
  *
@@ -15,11 +15,11 @@ const STRINGS = {
   en: {
     'skip': 'Skip to downloads',
 
-    'hero.title': 'Your Claude Code limits, where you can see them.',
-    'hero.lede': 'A floating widget that reads the rate-limit headers Claude Code already receives, and tells you how much of the five-hour window is gone before it stops you.',
+    'hero.title': "Your coding agent's limits, where you can see them.",
+    'hero.lede': 'A floating widget that reads what Claude Code or Codex already knows about your quota, and tells you how much of the five-hour window is gone before it stops you.',
     'hero.cta': 'Download',
     'hero.source': 'Read the source',
-    'hero.fine': 'Free and MIT licensed. Nothing to configure: it reads the credentials Claude Code already wrote.',
+    'hero.fine': 'Free and MIT licensed. Nothing to configure: it reads the credentials the agent already wrote.',
     'hero.caption': 'Running, not a screenshot. The collection interval is compressed so you can watch a cycle.',
 
     'how.title': 'The number was always in the response. Nobody was reading it.',
@@ -29,9 +29,16 @@ const STRINGS = {
     'how.b3': 'of the weekly window, on the second row',
     'how.b4': 'the status chip, and which window binds first',
     'how.c1t': 'Nothing to configure',
-    'how.c1b': 'The token comes from wherever Claude Code put it — a file on Windows and Linux, the login keychain on macOS — and is re-read every cycle. When Claude Code refreshes it, the widget follows on its own.',
+    'how.c1b': 'The token comes from wherever the agent put it — a file, or the login keychain on macOS — and is re-read every cycle. When the agent refreshes it, the widget follows on its own. Nothing is refreshed on your behalf: spending a rotating refresh token could log you out of the agent itself.',
     'how.c2t': 'Real token counts',
     'how.c2b': 'The headers only carry percentages. The absolute numbers exist only in the transcripts on your disk, so those are read straight off it — no second account, no telemetry, nothing leaves the machine.',
+
+    'agents.title': 'Both meter the same two windows.',
+    'agents.lede': 'A rolling five hours and a week, at 18000 and 604800 seconds exactly, each a percentage with a reset. That is why one widget wears either without redrawing anything. Pick which in the menu; the panel names the one in view and wears its mark, because the ring and the rows look identical either way.',
+    'agents.c1t': 'Claude Code',
+    'agents.c1b': 'No usage endpoint exists, so a reading costs the smallest request there is — one output token — sent purely to read the rate-limit headers off the reply. Real token counts come from the transcripts on your disk.',
+    'agents.c2t': 'Codex',
+    'agents.c2b': 'A usage endpoint exists, so a reading costs nothing against your quota. It belongs to the ChatGPT web backend rather than a published API, so a reply that arrives without the two windows is reported as a failed reading rather than guessed at.',
 
     'alert.title': 'It speaks first, once.',
     'alert.lede': "A display only works if you look at it. Once per five-hour window, when usage first crosses a threshold you set, the widget says so through your system's own notifications — and it says the part worth acting on: not that you are at 80%, but that at this rate you have forty minutes left.",
@@ -47,7 +54,7 @@ const STRINGS = {
     'dl.mac': 'Right-click the app and choose Open the first time. The first poll asks for keychain access, because that is where your token lives.',
     'dl.mac2': 'Same as above. Built separately because there is no universal binary for the Qt runtime this uses.',
     'dl.linux': 'chmod +x and run. GNOME needs an AppIndicator extension for the tray; without one the widget stays on screen instead.',
-    'dl.note': 'Requires Claude Code to have been signed in once on the same machine. A SHA-256 is published beside every file.',
+    'dl.note': 'Requires the agent you want to watch to have been signed in once on the same machine. A SHA-256 is published beside every file.',
     'dl.source': 'or from source',
 
     'foot.by': 'Built by'
@@ -56,11 +63,11 @@ const STRINGS = {
   pt: {
     'skip': 'Ir para os downloads',
 
-    'hero.title': 'Seus limites do Claude Code, onde dá para ver.',
-    'hero.lede': 'Um widget flutuante que lê os headers de limite que o Claude Code já recebe, e diz quanto da janela de cinco horas foi embora antes que ela te pare.',
+    'hero.title': 'Os limites do seu agente, onde dá para ver.',
+    'hero.lede': 'Um widget flutuante que lê o que o Claude Code ou o Codex já sabem sobre a sua cota, e diz quanto da janela de cinco horas foi embora antes que ela te pare.',
     'hero.cta': 'Baixar',
     'hero.source': 'Ver o código',
-    'hero.fine': 'Gratuito e sob licença MIT. Nada para configurar: ele lê as credenciais que o Claude Code já gravou.',
+    'hero.fine': 'Gratuito e sob licença MIT. Nada para configurar: ele lê as credenciais que o agente já gravou.',
     'hero.caption': 'Rodando, não é um print. O intervalo de coleta está acelerado para você ver um ciclo inteiro.',
 
     'how.title': 'O número sempre esteve na resposta. Ninguém estava lendo.',
@@ -70,9 +77,16 @@ const STRINGS = {
     'how.b3': 'da janela semanal, na segunda linha',
     'how.b4': 'o chip de status, e qual janela é o gargalo',
     'how.c1t': 'Nada para configurar',
-    'how.c1b': 'O token sai de onde o Claude Code o guardou — um arquivo no Windows e no Linux, o chaveiro de login no macOS — e é relido a cada ciclo. Quando o Claude Code renova, o widget acompanha sozinho.',
+    'how.c1b': 'O token sai de onde o agente o guardou — um arquivo, ou o chaveiro de login no macOS — e é relido a cada ciclo. Quando o agente renova, o widget acompanha sozinho. Nada é renovado por você: gastar um refresh token rotativo poderia te deslogar do próprio agente.',
     'how.c2t': 'Contagem real de tokens',
     'how.c2b': 'Os headers só trazem porcentagem. Os números absolutos existem apenas nos transcripts do seu disco, então são lidos direto de lá — sem segunda conta, sem telemetria, nada sai da máquina.',
+
+    'agents.title': 'Os dois medem as mesmas duas janelas.',
+    'agents.lede': 'Cinco horas móveis e uma semana, de 18000 e 604800 segundos exatos, cada uma uma porcentagem com reset. É por isso que um widget só veste qualquer um dos dois sem redesenhar nada. Escolha qual no menu; o painel nomeia o que está à vista e veste a marca dele, porque o anel e as linhas são idênticos nos dois casos.',
+    'agents.c1t': 'Claude Code',
+    'agents.c1b': 'Não existe endpoint de uso, então a leitura custa a menor requisição possível — um token de saída — enviada só para ler os headers de limite da resposta. A contagem real de tokens vem dos transcripts do seu disco.',
+    'agents.c2t': 'Codex',
+    'agents.c2b': 'Existe endpoint de uso, então a leitura não custa nada da sua cota. Ele pertence ao backend web do ChatGPT e não a uma API publicada, então uma resposta que chegue sem as duas janelas é reportada como leitura que falhou, não adivinhada.',
 
     'alert.title': 'Ele fala primeiro, uma vez.',
     'alert.lede': 'Mostrador só funciona se você olhar. Uma vez por janela de cinco horas, quando o uso cruza um limiar que você define, o widget avisa pelas notificações do seu próprio sistema — e diz a parte que dá para agir em cima: não que você está em 80%, mas que nesse ritmo sobram quarenta minutos.',
@@ -88,7 +102,7 @@ const STRINGS = {
     'dl.mac': 'Na primeira vez, clique com o botão direito e escolha Abrir. A primeira coleta pede acesso ao chaveiro, porque é lá que mora seu token.',
     'dl.mac2': 'Igual ao de cima. Vem separado porque não existe binário universal para o runtime Qt que ele usa.',
     'dl.linux': 'chmod +x e execute. O GNOME precisa de uma extensão AppIndicator para a bandeja; sem ela o widget fica na tela no lugar dela.',
-    'dl.note': 'Exige ter feito login do Claude Code uma vez na mesma máquina. Um SHA-256 é publicado ao lado de cada arquivo.',
+    'dl.note': 'Exige ter feito login uma vez na mesma máquina, no agente que você quer monitorar. Um SHA-256 é publicado ao lado de cada arquivo.',
     'dl.source': 'ou pelo código-fonte',
 
     'foot.by': 'Feito por'
@@ -219,7 +233,7 @@ function startWidget() {
 }
 
 /* ──────────────────────────────────────────────── downloads, live */
-const REPO = 'lucasmaziero/claude-usage-widget';
+const REPO = 'lucasmaziero/agent-gauge';
 
 function slotFor(name) {
   if (name.endsWith('.sha256')) return null;

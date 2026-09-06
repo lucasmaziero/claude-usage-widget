@@ -1,6 +1,6 @@
-/* Claude Usage Widget - landing page.
+/* Agent Gauge - landing page.
  *
- * Every colour here is lifted from src/claude_usage/theme.py. A near-black
+ * Every colour here is lifted from src/agent_gauge/theme.py. A near-black
  * page with one warm accent is a tired look when it is picked for a landing
  * page; it is not picked here. It is what the product already ships, and the
  * point of the page is that the running widget in the hero sits on the same
@@ -84,6 +84,12 @@ a { color: inherit; }
   letter-spacing: -.01em;
 }
 .clawd { width: 22px; height: 22px; fill: var(--accent); flex: none; }
+
+/* The app's own mark: the gauge, because it watches two agents and can wear
+   neither of their logos as its identity. */
+.gauge-mark { width: 22px; height: 22px; flex: none; fill: none; stroke-width: 4; }
+.gauge-mark .track { stroke: var(--border); }
+.gauge-mark .arc { stroke: var(--accent); stroke-linecap: round; }
 
 .bar nav { display: flex; align-items: center; gap: 10px; }
 

@@ -3,14 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Claude Usage Widget</title>
-<meta name="description" content="Your Claude Code limits, on a floating desktop widget. Windows, macOS and Linux.">
+<title>Agent Gauge</title>
+<meta name="description" content="Your coding agent's limits, on a floating desktop widget. Claude Code or Codex, on Windows, macOS and Linux.">
 
 <meta property="og:type" content="website">
-<meta property="og:title" content="Claude Usage Widget">
-<meta property="og:description" content="Your Claude Code limits, on a floating desktop widget. Windows, macOS and Linux.">
-<meta property="og:image" content="https://lucasmaziero.github.io/claude-usage-widget/preview.png">
-<meta property="og:url" content="https://lucasmaziero.github.io/claude-usage-widget/">
+<meta property="og:title" content="Agent Gauge">
+<meta property="og:description" content="Your coding agent's limits, on a floating desktop widget. Claude Code or Codex, on Windows, macOS and Linux.">
+<meta property="og:image" content="https://lucasmaziero.github.io/agent-gauge/preview.png">
+<meta property="og:url" content="https://lucasmaziero.github.io/agent-gauge/">
 <meta name="twitter:card" content="summary_large_image">
 
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
@@ -24,16 +24,19 @@
 <a class="skip" href="#downloads" data-i18n="skip">Skip to downloads</a>
 
 <header class="bar">
-  <a class="mark" href="#top" aria-label="Claude Usage Widget">
-    <svg class="clawd" viewBox="0 0 24 24" aria-hidden="true"><path fill-rule="evenodd" clip-rule="evenodd" d="M20.998 10.949H24v3.102h-3v3.028h-1.487V20H18v-2.921h-1.487V20H15v-2.921H9V20H7.488v-2.921H6V20H4.487v-2.921H3V14.05H0V10.95h3V5h17.998v5.949zM6 10.949h1.488V8.102H6v2.847zm10.51 0H18V8.102h-1.49v2.847z"/></svg>
-    <span>Claude Usage</span>
+  <a class="mark" href="#top" aria-label="Agent Gauge">
+    <svg class="gauge-mark" viewBox="0 0 24 24" aria-hidden="true">
+      <circle cx="12" cy="12" r="7" class="track"/>
+      <path d="M12 5a7 7 0 1 1-6.88 8.31" class="arc"/>
+    </svg>
+    <span>Agent Gauge</span>
   </a>
   <nav>
     <div class="lang" role="group" aria-label="Language">
       <button type="button" data-lang="en" aria-pressed="true">EN</button>
       <button type="button" data-lang="pt" aria-pressed="false">PT</button>
     </div>
-    <a class="ghost" href="https://github.com/lucasmaziero/claude-usage-widget">GitHub</a>
+    <a class="ghost" href="https://github.com/lucasmaziero/agent-gauge">GitHub</a>
   </nav>
 </header>
 
@@ -42,7 +45,7 @@
   <!-- ─────────────────────────────────────────────── hero -->
   <section class="hero">
     <div class="hero-copy">
-      <p class="eyebrow">windows · macos · linux</p>
+      <p class="eyebrow">claude code · codex</p>
       <h1 data-i18n="hero.title">Your Claude Code limits, where you can see them.</h1>
       <p class="lede" data-i18n="hero.lede">A floating widget that reads the rate-limit headers Claude Code already receives, and tells you how much of the five-hour window is gone before it stops you.</p>
       <div class="actions">
@@ -50,7 +53,7 @@
           <span data-i18n="hero.cta">Download</span>
           <span class="ver" id="hero-version"></span>
         </a>
-        <a class="btn" href="https://github.com/lucasmaziero/claude-usage-widget" data-i18n="hero.source">Read the source</a>
+        <a class="btn" href="https://github.com/lucasmaziero/agent-gauge" data-i18n="hero.source">Read the source</a>
       </div>
       <p class="fine" data-i18n="hero.fine">Free and MIT licensed. Nothing to configure: it reads the credentials Claude Code already wrote.</p>
     </div>
@@ -141,6 +144,23 @@
     </div>
   </section>
 
+  <!-- ────────────────────────────────────────────── agents -->
+  <section class="band">
+    <p class="eyebrow">one gauge, either agent</p>
+    <h2 data-i18n="agents.title">Both meter the same two windows.</h2>
+    <p class="lede narrow" data-i18n="agents.lede">A rolling five hours and a week, at 18000 and 604800 seconds exactly, each a percentage with a reset. That is why one widget wears either without redrawing anything. Pick which in the menu; the panel names the one in view and wears its mark, because the ring and the rows look identical either way.</p>
+    <div class="pair">
+      <div>
+        <h3 data-i18n="agents.c1t">Claude Code</h3>
+        <p data-i18n="agents.c1b">No usage endpoint exists, so a reading costs the smallest request there is — one output token — sent purely to read the rate-limit headers off the reply. Real token counts come from the transcripts on your disk.</p>
+      </div>
+      <div>
+        <h3 data-i18n="agents.c2t">Codex</h3>
+        <p data-i18n="agents.c2b">A usage endpoint exists, so a reading costs nothing against your quota. It belongs to the ChatGPT web backend rather than a published API, so a reply that arrives without the two windows is reported as a failed reading rather than guessed at.</p>
+      </div>
+    </div>
+  </section>
+
   <!-- ────────────────────────────────────────────── alerts -->
   <section class="band">
     <p class="eyebrow">before the wall</p>
@@ -155,27 +175,27 @@
     <p class="lede narrow" data-i18n="dl.lede">Every build is unsigned, so each system objects in its own way. The note under each one says how to get past it.</p>
 
     <div class="grid" id="dl-grid">
-      <a class="card" data-slot="win" href="https://github.com/lucasmaziero/claude-usage-widget/releases/latest">
+      <a class="card" data-slot="win" href="https://github.com/lucasmaziero/agent-gauge/releases/latest">
         <span class="os">Windows</span>
-        <span class="file">ClaudeUsage.exe</span>
+        <span class="file">AgentGauge.exe</span>
         <span class="meta"><span class="size"></span><span class="arch">x64 · 10+</span></span>
         <span class="gotcha" data-i18n="dl.win">Installs per user, no admin. SmartScreen warns about an unknown publisher — choose More info, then Run anyway.</span>
       </a>
-      <a class="card" data-slot="arm64" href="https://github.com/lucasmaziero/claude-usage-widget/releases/latest">
+      <a class="card" data-slot="arm64" href="https://github.com/lucasmaziero/agent-gauge/releases/latest">
         <span class="os">macOS<em data-i18n="dl.silicon">Apple Silicon</em></span>
-        <span class="file">ClaudeUsage-arm64.dmg</span>
+        <span class="file">AgentGauge-arm64.dmg</span>
         <span class="meta"><span class="size"></span><span class="arch">arm64 · 11+</span></span>
         <span class="gotcha" data-i18n="dl.mac">Right-click the app and choose Open the first time. The first poll asks for keychain access, because that is where your token lives.</span>
       </a>
-      <a class="card" data-slot="x86" href="https://github.com/lucasmaziero/claude-usage-widget/releases/latest">
+      <a class="card" data-slot="x86" href="https://github.com/lucasmaziero/agent-gauge/releases/latest">
         <span class="os">macOS<em>Intel</em></span>
-        <span class="file">ClaudeUsage-x86_64.dmg</span>
+        <span class="file">AgentGauge-x86_64.dmg</span>
         <span class="meta"><span class="size"></span><span class="arch">x86_64 · 11+</span></span>
         <span class="gotcha" data-i18n="dl.mac2">Same as above. Built separately because there is no universal binary for the Qt runtime this uses.</span>
       </a>
-      <a class="card" data-slot="linux" href="https://github.com/lucasmaziero/claude-usage-widget/releases/latest">
+      <a class="card" data-slot="linux" href="https://github.com/lucasmaziero/agent-gauge/releases/latest">
         <span class="os">Linux</span>
-        <span class="file">ClaudeUsage.AppImage</span>
+        <span class="file">AgentGauge.AppImage</span>
         <span class="meta"><span class="size"></span><span class="arch">x86_64</span></span>
         <span class="gotcha" data-i18n="dl.linux">chmod +x and run. GNOME needs an AppIndicator extension for the tray; without one the widget stays on screen instead.</span>
       </a>
@@ -185,10 +205,10 @@
 
     <div class="source">
       <p class="eyebrow" data-i18n="dl.source">or from source</p>
-      <pre><code>git clone https://github.com/lucasmaziero/claude-usage-widget
-cd claude-usage-widget
+      <pre><code>git clone https://github.com/lucasmaziero/agent-gauge
+cd agent-gauge
 uv sync
-uv run claude-usage</code></pre>
+uv run agent-gauge</code></pre>
     </div>
   </section>
 
@@ -196,9 +216,9 @@ uv run claude-usage</code></pre>
 
 <footer>
   <div>
-    <a href="https://github.com/lucasmaziero/claude-usage-widget">Source</a>
-    <a href="https://github.com/lucasmaziero/claude-usage-widget/releases">Releases</a>
-    <a href="https://github.com/lucasmaziero/claude-usage-widget/blob/main/LICENSE">MIT</a>
+    <a href="https://github.com/lucasmaziero/agent-gauge">Source</a>
+    <a href="https://github.com/lucasmaziero/agent-gauge/releases">Releases</a>
+    <a href="https://github.com/lucasmaziero/agent-gauge/blob/main/LICENSE">MIT</a>
   </div>
   <p><span data-i18n="foot.by">Built by</span> <a href="https://github.com/lucasmaziero">Lucas Maziero</a></p>
 </footer>
