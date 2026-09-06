@@ -12,7 +12,7 @@ from PySide6.QtCore import QPoint, QPointF, QRectF, Qt, Signal
 from PySide6.QtGui import QFont, QPainter
 from PySide6.QtWidgets import QWidget
 
-from . import brand, paint, signin, theme
+from . import brand, paint, providers, signin, theme
 from .i18n import t, tn
 from .poller import Snapshot
 from .theme import LG, MD, SM
@@ -133,16 +133,23 @@ class Panel(QWidget):
 
     def _header(self, p: QPainter, snap: Snapshot | None, right) -> None:
         head = QRectF(PAD, HEAD_Y, COL, 20)
-        # Clawd goes gray when the API misbehaves.
-        unwell = bool(snap and (snap.error or snap.incidents))
-        icon = brand.clawd(13, theme.FAINT if unwell else theme.ACCENT,
-                           self.devicePixelRatioF())
-        icon_w = icon.width() / icon.devicePixelRatio()
-        icon_h = icon.height() / icon.devicePixelRatio()
-        p.drawPixmap(QPointF(PAD, head.center().y() - icon_h / 2), icon)
+        provider = providers.get(str(self.settings["provider"]))
 
-        paint.text(p, head.adjusted(icon_w + SM, 0, 0, 0), "CLAUDE USAGE", theme.TEXT, 9,
-                   QFont.Weight.DemiBold, spacing=1.2)
+        # The mascot is Claude Code's mark, so it appears only when that is what
+        # is being watched. Under another agent's name it would be a lie about
+        # whose numbers these are - which is the one thing the header must not
+        # get wrong once there is more than one source.
+        offset = 0.0
+        if provider.key == "claude":
+            unwell = bool(snap and (snap.error or snap.incidents))
+            icon = brand.clawd(13, theme.FAINT if unwell else theme.ACCENT,
+                               self.devicePixelRatioF())
+            icon_h = icon.height() / icon.devicePixelRatio()
+            p.drawPixmap(QPointF(PAD, head.center().y() - icon_h / 2), icon)
+            offset = icon.width() / icon.devicePixelRatio() + SM
+
+        paint.text(p, head.adjusted(offset, 0, 0, 0), provider.label.upper(),
+                   theme.TEXT, 9, QFont.Weight.DemiBold, spacing=1.2)
         paint.text(p, head, (snap.subscription if snap else "").upper() or theme.NO_DATA,
                    theme.ACCENT, 8, QFont.Weight.DemiBold, align=right, spacing=1.0)
 
@@ -208,7 +215,8 @@ class Panel(QWidget):
         elif snap and snap.incidents:
             paint.text(p, line, paint.elide("! " + snap.incidents[0], COL, 8), theme.WARN, 8)
         else:
-            paint.text(p, line, t("panel.no_incidents"), theme.FAINT, 8)
+            host = providers.get(str(self.settings["provider"])).status_host
+            paint.text(p, line, t("panel.no_incidents", host=host), theme.FAINT, 8)
 
     def _footer(self, p: QPainter, snap: Snapshot | None, right) -> None:
         foot = QRectF(PAD, H - PAD - 20, COL, 20)

@@ -20,22 +20,15 @@ from __future__ import annotations
 from PySide6.QtCore import QUrl
 from PySide6.QtGui import QDesktopServices
 
-from . import paths
-
-# docs.claude.com/en/docs/claude-code/setup redirects here; this is the target.
-# The page covers installation and the sign-in step, which is exactly the span
-# between the two states below.
-HELP_URL = "https://code.claude.com/docs/en/setup"
-
-INSTALL = "install"      # no sign of Claude Code on this machine
+INSTALL = "install"      # no sign of this agent on the machine
 SIGNIN = "signin"        # it has been used here, but there is no usable token
 
 
-def needed() -> str:
+def needed(provider) -> str:
     """Which dead end the user is at, as INSTALL or SIGNIN."""
-    return SIGNIN if paths.claude_dir().exists() else INSTALL
+    return SIGNIN if provider.home().exists() else INSTALL
 
 
-def open_help() -> None:
-    """Hand the setup page to the user's browser."""
-    QDesktopServices.openUrl(QUrl(HELP_URL))
+def open_help(provider) -> None:
+    """Hand the agent's setup page to the user's browser."""
+    QDesktopServices.openUrl(QUrl(provider.help_url))

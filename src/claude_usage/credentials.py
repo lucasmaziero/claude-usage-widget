@@ -38,6 +38,7 @@ class Credentials:
     expires_at: float          # epoch seconds
     subscription: str          # max | pro | ...
     tier: str
+    account: str = ""          # Codex sends it as a header; Claude has no use for it
 
     @property
     def expired(self) -> bool:

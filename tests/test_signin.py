@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import pytest
 
-from claude_usage import credentials, i18n, paths, signin
+from claude_usage import credentials, i18n, paths, providers, signin
 from claude_usage.panel import Panel
 from claude_usage.poller import Poller
 from claude_usage.settings import Settings
@@ -28,15 +28,18 @@ def has_claude_dir(monkeypatch, tmp_path):
     monkeypatch.setattr(paths, "claude_dir", lambda: tmp_path / ".claude")
 
 
+CLAUDE = providers.get("claude")
+
+
 def test_no_claude_directory_means_it_was_never_installed(no_claude_dir):
-    assert signin.needed() == signin.INSTALL
+    assert signin.needed(CLAUDE) == signin.INSTALL
 
 
 def test_the_directory_alone_means_signed_out(has_claude_dir):
     """Deliberately not a PATH lookup: the desktop app and the IDE extensions
     write this directory and never put a `claude` binary on PATH, so a PATH test
     would tell an active user they have not installed it."""
-    assert signin.needed() == signin.SIGNIN
+    assert signin.needed(CLAUDE) == signin.SIGNIN
 
 
 def _snapshot_without_credentials(monkeypatch):
@@ -50,7 +53,7 @@ def test_a_missing_install_is_not_told_to_run_claude(monkeypatch, no_claude_dir)
     """"Run `claude`" is wrong advice for someone who has no Claude Code."""
     snap = _snapshot_without_credentials(monkeypatch)
     assert snap.setup == signin.INSTALL
-    assert snap.error == i18n.t("error.no_claude")
+    assert snap.error == i18n.t("error.no_claude", agent=CLAUDE.label)
     assert "`claude`" not in snap.error
 
 

@@ -10,7 +10,7 @@ from dataclasses import dataclass, field
 
 from PySide6.QtCore import QThread, Signal
 
-from . import api, credentials, diag, paths, signin, tokens
+from . import api, credentials, diag, paths, providers, signin, tokens
 from .i18n import t
 
 HISTORY_FILE = paths.config_dir() / "history.json"
@@ -62,9 +62,10 @@ class Poller(QThread):
     # back as you type and you noticing it was ever out.
     CREDS_POLL = 5
 
-    def __init__(self, interval: int, parent=None) -> None:
+    def __init__(self, interval: int, provider=None, parent=None) -> None:
         super().__init__(parent)
         self._interval = interval
+        self.provider = provider or providers.get(providers.DEFAULT)
         self._wake = threading.Event()
         self._stop = False
         self._last_status = 0.0
@@ -138,10 +139,20 @@ class Poller(QThread):
         factor = min(2 ** (self._idle - self.IDLE_AFTER + 1), self.IDLE_MAX)
         return self._interval * factor
 
+    def set_provider(self, provider) -> None:
+        """Switch what is being watched. The history belongs to the old one, so
+        it goes: a burn rate mixing two agents' windows would be a fiction."""
+        self.provider = provider
+        self.history.clear()
+        self._save_history()
+        self._last_h5 = None
+        self._idle = 0
+        self._wake.set()
+
     def _collect(self) -> Snapshot:
         self._watching = False
         try:
-            creds = credentials.load()
+            creds = self.provider.credentials()
             if creds.expired:
                 # Not a fault. The token lives eight hours and Claude Code
                 # only renews it while running, so an overnight gap ends here
@@ -156,14 +167,15 @@ class Poller(QThread):
             # Two dead ends wear the same exception. "Run `claude` to sign in"
             # is wrong advice for someone who has never installed it, so the
             # message is chosen here rather than where the file was missed.
-            need = signin.needed()
-            message = t("error.no_claude") if need == signin.INSTALL else str(exc)
+            need = signin.needed(self.provider)
+            message = (t("error.no_claude", agent=self.provider.label)
+                       if need == signin.INSTALL else str(exc))
             self._idle = 0
             diag.record(need, **diag.credentials_context())
             return Snapshot(error=message, setup=need)
 
-        usage = api.fetch_usage(creds.token)
-        snap = Snapshot(usage=usage, subscription=creds.subscription,
+        usage = self.provider.fetch(creds)
+        snap = Snapshot(usage=usage, subscription=usage.plan or creds.subscription,
                         error="" if usage.ok else usage.error)
 
         if usage.ok:
@@ -181,7 +193,7 @@ class Poller(QThread):
             self._save_history()
 
             with contextlib.suppress(OSError):
-                snap.totals = tokens.collect(start)
+                snap.totals = self.provider.totals(start)
         else:
             self._idle = 0                   # a failure is no reason to look away
             # The one that matters: an HTTP 401 here means the server refused a
@@ -196,7 +208,7 @@ class Poller(QThread):
 
         now = time.time()
         if now - self._last_status >= self.STATUS_EVERY:
-            self._incidents = api.fetch_incidents()
+            self._incidents = self.provider.incidents()
             self._last_status = now
         snap.incidents = list(self._incidents)
         return snap

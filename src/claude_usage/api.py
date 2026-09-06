@@ -59,6 +59,7 @@ class Usage:
     ok: bool = False
     error: str = ""                 # user-facing, translated
     code: int = 0                   # HTTP status, when there was one
+    plan: str = ""                  # when the reading carries it, as Codex's does
 
     @property
     def worst(self) -> float:

@@ -33,7 +33,7 @@ STRINGS: dict[str, dict[str, str]] = {
         "panel.no_transcripts": "no transcripts in this window",
         "panel.tokens_one": "{total} tokens · {cache} cache · {n} session",
         "panel.tokens_other": "{total} tokens · {cache} cache · {n} sessions",
-        "panel.no_incidents": "status.claude.com reports no incidents",
+        "panel.no_incidents": "{host} reports no incidents",
         "panel.updated": "updated {stamp} · every {cadence}",
         "panel.updated_idle": "updated {stamp} · every {cadence}, idle",
         "panel.refresh_now": "refresh now",
@@ -82,7 +82,9 @@ STRINGS: dict[str, dict[str, str]] = {
         # What to do comes first in every one of these: the panel elides a
         # long line, and the tail is the half that tells the user what to do.
         "error.no_credentials": "run `claude` once to sign in - {path} not found",
-        "error.no_claude": "no sign of Claude Code on this machine",
+        "error.no_claude": "no sign of {agent} on this machine",
+        "error.no_windows": "the usage reply carried no rate-limit windows",
+        "menu.provider": "Watching",
         # Kept short on purpose: the widget's error column is 120px at 9pt,
         # and "waiting for Claude Code" runs 127. An elided reassurance is
         # not reassuring.
@@ -114,7 +116,7 @@ STRINGS: dict[str, dict[str, str]] = {
         "panel.no_transcripts": "sem transcripts nesta janela",
         "panel.tokens_one": "{total} tokens · {cache} cache · {n} sessão",
         "panel.tokens_other": "{total} tokens · {cache} cache · {n} sessões",
-        "panel.no_incidents": "status.claude.com sem incidentes",
+        "panel.no_incidents": "{host} sem incidentes",
         "panel.updated": "atualizado {stamp} · a cada {cadence}",
         "panel.updated_idle": "atualizado {stamp} · a cada {cadence}, ocioso",
         "panel.refresh_now": "atualizar agora",
@@ -161,7 +163,9 @@ STRINGS: dict[str, dict[str, str]] = {
         "time.now": "agora",
         # errors, all user facing
         "error.no_credentials": "faça login com `claude` uma vez - {path} não existe",
-        "error.no_claude": "nenhum sinal do Claude Code nesta máquina",
+        "error.no_claude": "nenhum sinal do {agent} nesta máquina",
+        "error.no_windows": "a resposta de uso não trouxe janelas de limite",
+        "menu.provider": "Monitorando",
         "error.waiting": "esperando o Claude",
         "error.no_keychain": ("faça login com `claude` uma vez - sem token no "
                               "chaveiro"),

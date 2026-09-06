@@ -10,7 +10,7 @@ from PySide6.QtGui import QAction, QActionGroup, QColor, QFont, QIcon, QPainter,
 from PySide6.QtNetwork import QLocalServer, QLocalSocket
 from PySide6.QtWidgets import QApplication, QMenu, QSystemTrayIcon
 
-from . import autostart, i18n, paint, paths, signin, theme
+from . import autostart, i18n, paint, paths, providers, signin, theme
 from .about import About
 from .i18n import t
 from .panel import Panel
@@ -159,7 +159,8 @@ class App(QObject):
         self.widget = FloatingWidget(self.settings)
         self.panel = Panel(self.settings)
         self.tray = QSystemTrayIcon(tray_icon(None))
-        self.poller = Poller(int(self.settings["poll_sec"]))
+        self.provider = providers.get(str(self.settings["provider"]))
+        self.poller = Poller(int(self.settings["poll_sec"]), self.provider)
 
         self._build_menu()
         self.tray.setContextMenu(self.menu)
@@ -171,7 +172,8 @@ class App(QObject):
         self.widget.menu_requested.connect(self._popup_menu)
         self.widget.refresh_requested.connect(self.refresh)
         self.panel.refresh_requested.connect(self.refresh)
-        self.panel.setup_requested.connect(signin.open_help)
+        self.panel.setup_requested.connect(
+            lambda: signin.open_help(self.provider))
         self.poller.updated.connect(self.on_update)
         self.poller.busy.connect(self.widget.set_busy)
 
@@ -221,6 +223,9 @@ class App(QObject):
         self.act_locked = self._check(t("menu.lock"), self.settings["locked"],
                                       self._toggle_locked)
 
+        self._submenu(t("menu.provider"), [p.key for p in providers.ALL],
+                      lambda key: providers.get(key).label,
+                      self.provider.key, self._set_provider)
         self._submenu(t("menu.interval"), POLL_CHOICES, poll_label,
                       int(self.settings["poll_sec"]), self._set_interval)
         self._submenu(t("menu.alert"), ALERT_CHOICES,
@@ -367,6 +372,24 @@ class App(QObject):
                 if projection else t("alert.body", clock=clock))
         self.tray.showMessage(t("alert.title", pct=u.h5), body,
                               tray_icon(snap), ALERT_MS)
+
+    def _set_provider(self, key: str) -> None:
+        """Switch which agent is watched. The old snapshot goes with it: leaving
+        one agent's numbers on screen under another's name is the one thing this
+        must never do."""
+        if key == self.provider.key:
+            return
+        self.settings["provider"] = key
+        self.settings.save()
+        self.provider = providers.get(key)
+
+        self.snap = None
+        self._alerted_for = -1
+        self.widget.set_snapshot(None)
+        self.panel.set_snapshot(None)
+        self.tray.setIcon(tray_icon(None))
+        self.tray.setToolTip(t("tray.collecting"))
+        self.poller.set_provider(self.provider)
 
     def _set_interval(self, seconds: int) -> None:
         self.settings["poll_sec"] = seconds
