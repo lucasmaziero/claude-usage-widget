@@ -165,12 +165,15 @@ The mascot in the header goes gray on a fetch error or an open incident, the sam
 widget's badge gives.
 
 **With no token** there is nothing to timestamp, so the footer carries the way out instead: a link
-that opens the Claude Code setup page. It names the actual dead end - **Get Claude Code** when there
-is no `~/.claude` on the machine at all, **How to sign in** when there is one but no usable token.
-That directory is the test rather than a `claude` on PATH, because the desktop app and the IDE
-extensions write it without ever installing a CLI, and a PATH check would tell an active user they
-had never installed anything. Nothing is installed for you: piping an install script into a shell on
-someone's behalf is not a thing a usage widget should do.
+to the setup page of whichever agent is being watched. It names the actual dead end - **Get Claude
+Code** or **Get Codex** when that agent's directory is not on the machine at all, **How to sign in**
+when it is there but carries no usable token. Every message on that path names the agent too, and
+none of them names a command: `claude` is not what a Codex user types.
+
+That directory - `~/.claude` or `~/.codex` - is the test rather than a binary on PATH, because the
+desktop apps and the IDE extensions write it without ever installing a CLI, and a PATH check would
+tell an active user they had never installed anything. Nothing is installed for you: piping an
+install script into a shell on someone's behalf is not a thing a usage widget should do.
 
 **Switching agents.** One at a time, from **Watching** in the menu. The panel header names the
 one in view and wears its mark - Claude Code's or Codex's own - because the ring and the rows look
@@ -273,7 +276,7 @@ installer/          packaging           tools/       icon and preview generators
 
 ```powershell
 uv sync                                           # creates the .venv with the dev group
-uv run pytest                                     # 228 tests, no network, no windows
+uv run pytest                                     # 240 tests, no network, no windows
 uv run ruff check .                               # lint (rules in pyproject.toml)
 uv run python tools/preview.py docs/preview.png   # offline render of both surfaces
 $env:AGENT_GAUGE_DEBUG=1; uv run agent-gauge    # prints every cycle to the console

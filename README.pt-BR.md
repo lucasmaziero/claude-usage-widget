@@ -162,13 +162,16 @@ reais da janela, incidentes abertos em `status.claude.com` e o carimbo da últim
 O mascote do cabeçalho acinzenta quando há erro de coleta ou incidente aberto, o mesmo sinal que o
 selo do widget dá.
 
-**Sem token** não há o que carimbar com hora, então o rodapé carrega a saída: um link que abre a
-página de setup do Claude Code. Ele nomeia o beco exato — **Instalar o Claude Code** quando não há
-`~/.claude` nenhum na máquina, **Como fazer login** quando há um mas sem token utilizável. O teste é
-esse diretório, e não um `claude` no PATH, porque o app de desktop e as extensões de IDE o escrevem
-sem nunca instalar uma CLI, e checar o PATH diria a um usuário ativo que ele nunca instalou nada.
-Nada é instalado por você: despejar script de instalação num shell em nome de alguém não é coisa que
-um widget de uso deva fazer.
+**Sem token** não há o que carimbar com hora, então o rodapé carrega a saída: um link para a página
+de setup do agente que está sendo monitorado. Ele nomeia o beco exato — **Instalar o Claude Code**
+ou **Instalar o Codex** quando o diretório daquele agente não está na máquina, **Como fazer login**
+quando está lá mas sem token utilizável. Toda mensagem desse caminho também nomeia o agente, e
+nenhuma delas nomeia um comando: `claude` não é o que um usuário de Codex digita.
+
+Esse diretório — `~/.claude` ou `~/.codex` — é o teste, e não um binário no PATH, porque os apps de
+desktop e as extensões de IDE o escrevem sem nunca instalar uma CLI, e checar o PATH diria a um
+usuário ativo que ele nunca instalou nada. Nada é instalado por você: despejar script de instalação
+num shell em nome de alguém não é coisa que um widget de uso deva fazer.
 
 **Trocar de agente.** Um de cada vez, em **Monitorando**, no menu. O cabeçalho do painel nomeia o
 que está à vista e veste a marca dele — a do Claude Code ou a do Codex — porque o anel e as linhas
@@ -272,7 +275,7 @@ installer/          empacotamento       tools/       geradores de ícone e previ
 
 ```powershell
 uv sync                                           # cria o .venv com o grupo de dev
-uv run pytest                                     # 228 testes, sem rede e sem janela
+uv run pytest                                     # 240 testes, sem rede e sem janela
 uv run ruff check .                               # lint (regras em pyproject.toml)
 uv run python tools/preview.py docs/preview.png   # render offline das duas telas
 $env:AGENT_GAUGE_DEBUG=1; uv run agent-gauge    # imprime cada ciclo no console
