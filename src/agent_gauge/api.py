@@ -89,7 +89,8 @@ def parse(headers, code: int) -> Usage:
     header contract can be tested without touching the network."""
     if headers.get(H5U) is None and headers.get(D7U) is None:
         if code == 401:
-            return Usage(ok=False, code=code, error=t("error.unauthorized"))
+            return Usage(ok=False, code=code,
+                         error=t("error.unauthorized", agent="Claude Code"))
         return Usage(ok=False, code=code, error=t("error.no_headers", code=code))
 
     return Usage(

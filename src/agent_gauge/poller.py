@@ -184,7 +184,8 @@ class Poller(QThread):
                 self._idle = 0
                 self._watching = True
                 diag.record("expired", **diag.credentials_context())
-                return Snapshot(error=t("error.waiting"), waiting=True)
+                return Snapshot(error=t("error.waiting", agent=self.provider.short),
+                                waiting=True)
         except credentials.CredentialsError as exc:
             # Two dead ends wear the same exception. "Run `claude` to sign in"
             # is wrong advice for someone who has never installed it, so the

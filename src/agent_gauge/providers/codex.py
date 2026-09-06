@@ -96,6 +96,7 @@ def _claim(data: dict) -> str:
 class Codex(Provider):
     key = "codex"
     label = "Codex"
+    short = "Codex"
     help_url = "https://github.com/openai/codex"
     status_host = "status.openai.com"
 
@@ -126,13 +127,14 @@ class Codex(Provider):
         try:
             raw = json.loads(path.read_text(encoding="utf-8"))
         except FileNotFoundError:
-            raise CredentialsError(t("error.no_credentials", path=path)) from None
+            raise CredentialsError(
+                t("error.no_credentials", agent=self.label, path=path)) from None
         except (OSError, json.JSONDecodeError) as exc:
             raise CredentialsError(t("error.unreadable", path=path, reason=exc)) from None
 
         token = (raw.get("tokens") or {}).get("access_token")
         if not token:
-            raise CredentialsError(t("error.no_token"))
+            raise CredentialsError(t("error.no_token", agent=self.label))
 
         return Credentials(
             token=token,
@@ -162,7 +164,8 @@ class Codex(Provider):
                 code = exc.code
                 exc.close()
                 if code == 401:
-                    return Usage(ok=False, code=code, error=t("error.unauthorized"))
+                    return Usage(ok=False, code=code,
+                                 error=t("error.unauthorized", agent=self.label))
                 return Usage(ok=False, code=code, error=t("error.no_headers", code=code))
             except (urllib.error.URLError, OSError) as exc:
                 problem = exc

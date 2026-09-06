@@ -25,8 +25,6 @@ from .paths import MACOS, credentials_file
 KEYCHAIN_SERVICE = "Claude Code-credentials"
 KEYCHAIN_TIMEOUT = 10       # the first call can sit on an authorization dialog
 
-CREDENTIALS_PATH = credentials_file()
-
 
 class CredentialsError(Exception):
     """No usable token where Claude Code would have left one."""
@@ -62,35 +60,36 @@ def read_keychain() -> str | None:
     return proc.stdout.strip() if proc.returncode == 0 else None
 
 
-def _read_raw(path: Path) -> str:
+def _read_raw(path: Path, agent: str) -> str:
     """The credentials JSON as text, from the most authoritative source first."""
     if MACOS:
         blob = read_keychain()
         if blob:
             return blob
         if not path.exists():
-            raise CredentialsError(t("error.no_keychain"))
+            raise CredentialsError(t("error.no_keychain", agent=agent))
     try:
         return path.read_text(encoding="utf-8")
     except FileNotFoundError:
-        raise CredentialsError(t("error.no_credentials", path=path)) from None
+        raise CredentialsError(t("error.no_credentials", agent=agent, path=path)) from None
     except OSError as exc:
         raise CredentialsError(t("error.unreadable", path=path, reason=exc)) from None
 
 
-def load(path: Path | None = None) -> Credentials:
+def load(path: Path | None = None, agent: str = "Claude Code") -> Credentials:
     """Parse the credentials. Failures come back translated: they are rendered
-    in the widget."""
+    in the widget, and they name the agent - this file is Claude Code's, but the
+    messages are shared with providers that read somewhere else entirely."""
     source = path if path is not None else credentials_file()
     try:
-        raw = json.loads(_read_raw(source))
+        raw = json.loads(_read_raw(source, agent))
     except json.JSONDecodeError as exc:
         raise CredentialsError(t("error.unreadable", path=source, reason=exc)) from None
 
     oauth = raw.get("claudeAiOauth") or {}
     token = oauth.get("accessToken")
     if not token:
-        raise CredentialsError(t("error.no_token"))
+        raise CredentialsError(t("error.no_token", agent=agent))
 
     return Credentials(
         token=token,

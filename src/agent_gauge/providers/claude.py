@@ -16,6 +16,7 @@ from .base import Provider
 class Claude(Provider):
     key = "claude"
     label = "Claude Code"
+    short = "Claude"
     help_url = "https://code.claude.com/docs/en/setup"
     status_host = "status.claude.com"
 
@@ -23,7 +24,7 @@ class Claude(Provider):
         return paths.claude_dir()
 
     def credentials(self) -> Credentials:
-        return credentials.load()
+        return credentials.load(agent=self.label)
 
     def fetch(self, creds: Credentials) -> api.Usage:
         return api.fetch_usage(creds.token)

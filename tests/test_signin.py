@@ -74,17 +74,28 @@ def test_a_working_snapshot_offers_nothing(monkeypatch):
 
 
 # ---------------------------------------------------------------- the panel
-@pytest.mark.parametrize("state,key", [
-    (signin.INSTALL, "panel.get_claude"),
-    (signin.SIGNIN, "panel.how_signin"),
+@pytest.mark.parametrize("state,expected", [
+    (signin.INSTALL, "Get Claude Code"),
+    (signin.SIGNIN, "How to sign in"),
 ])
-def test_the_panel_offers_the_matching_way_out(qapp, tmp_path, state, key):
+def test_the_panel_offers_the_matching_way_out(qapp, tmp_path, state, expected):
+    """The install prompt names the agent. "Get Claude Code" under Codex would
+    be the same lie the header used to tell, in a different place."""
     from agent_gauge.poller import Snapshot
 
     panel = Panel(Settings(tmp_path / "settings.json"))
-    panel.set_snapshot(Snapshot(error="stuck", setup=state))
-    assert i18n.t(key) in panel._setup_label()
+    panel.set_snapshot(Snapshot(error="stuck", setup=state, provider="claude"))
+    assert expected in panel._setup_label()
     assert not panel._setup_zone().isEmpty()
+
+
+def test_the_install_prompt_names_the_agent_being_watched(qapp, tmp_path):
+    from agent_gauge.poller import Snapshot
+
+    panel = Panel(Settings(tmp_path / "settings.json"))
+    panel.set_snapshot(Snapshot(error="stuck", setup=signin.INSTALL, provider="codex"))
+    assert "Codex" in panel._setup_label()
+    assert "Claude" not in panel._setup_label()
 
 
 def test_a_healthy_panel_has_no_hit_zone(qapp, tmp_path):

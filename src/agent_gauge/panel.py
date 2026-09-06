@@ -94,8 +94,12 @@ class Panel(QWidget):
         """Empty unless the user is stuck without a token."""
         if not (self.snap and self.snap.setup):
             return ""
-        key = "panel.get_claude" if self.snap.setup == signin.INSTALL else "panel.how_signin"
-        return t(key) + "  →"
+        # The agent comes off the snapshot, like the header: "Get Claude Code"
+        # under Codex would be the same lie in a different place.
+        provider = providers.get(self.snap.provider or str(self.settings["provider"]))
+        if self.snap.setup == signin.INSTALL:
+            return t("panel.get_agent", agent=provider.label) + "  →"
+        return t("panel.how_signin") + "  →"
 
     def _setup_zone(self) -> QRectF:
         """Hit area of the setup link, measured rather than fixed: it shares the

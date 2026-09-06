@@ -57,7 +57,7 @@ STRINGS: dict[str, dict[str, str]] = {
         "alert.title": "{pct:.0f}% of the 5-hour window",
         "alert.body": "Resets at {clock}.",
         "alert.body_rate": "At this rate it hits 100% in {projection}. Resets at {clock}.",
-        "panel.get_claude": "Get Claude Code",
+        "panel.get_agent": "Get {agent}",
         # about
         "menu.about": "About",
         "menu.check_updates": "Check for updates",
@@ -81,19 +81,18 @@ STRINGS: dict[str, dict[str, str]] = {
         # errors, all user facing
         # What to do comes first in every one of these: the panel elides a
         # long line, and the tail is the half that tells the user what to do.
-        "error.no_credentials": "run `claude` once to sign in - {path} not found",
+        "error.no_credentials": "sign in to {agent} - {path} not found",
         "error.no_claude": "no sign of {agent} on this machine",
         "error.no_windows": "the usage reply carried no rate-limit windows",
         "menu.provider": "Watching",
         # Kept short on purpose: the widget's error column is 120px at 9pt,
         # and "waiting for Claude Code" runs 127. An elided reassurance is
         # not reassuring.
-        "error.waiting": "waiting for Claude",
-        "error.no_keychain": ("run `claude` once to sign in - no token in the "
-                              "login keychain"),
+        "error.waiting": "waiting for {agent}",
+        "error.no_keychain": "sign in to {agent} - no token in the login keychain",
         "error.unreadable": "could not read {path}: {reason}",
-        "error.no_token": "sign in to Claude Code again - credentials carry no accessToken",
-        "error.unauthorized": "token refused (401): run `claude` to refresh it",
+        "error.no_token": "sign in to {agent} again - credentials carry no accessToken",
+        "error.unauthorized": "token refused (401) - sign in to {agent} again",
         "error.no_headers": "HTTP {code} response carried no usage headers",
         "error.network": "network: {reason}",
         "error.no_tray": "system tray unavailable",
@@ -140,7 +139,7 @@ STRINGS: dict[str, dict[str, str]] = {
         "alert.title": "{pct:.0f}% da janela de 5 horas",
         "alert.body": "Reseta às {clock}.",
         "alert.body_rate": "Nesse ritmo estoura em {projection}. Reseta às {clock}.",
-        "panel.get_claude": "Instalar o Claude Code",
+        "panel.get_agent": "Instalar o {agent}",
         # sobre
         "menu.about": "Sobre",
         "menu.check_updates": "Verificar atualizações",
@@ -162,16 +161,15 @@ STRINGS: dict[str, dict[str, str]] = {
         # time
         "time.now": "agora",
         # errors, all user facing
-        "error.no_credentials": "faça login com `claude` uma vez - {path} não existe",
+        "error.no_credentials": "faça login no {agent} - {path} não existe",
         "error.no_claude": "nenhum sinal do {agent} nesta máquina",
         "error.no_windows": "a resposta de uso não trouxe janelas de limite",
         "menu.provider": "Monitorando",
-        "error.waiting": "esperando o Claude",
-        "error.no_keychain": ("faça login com `claude` uma vez - sem token no "
-                              "chaveiro"),
+        "error.waiting": "esperando o {agent}",
+        "error.no_keychain": "faça login no {agent} - sem token no chaveiro",
         "error.unreadable": "não consegui ler {path}: {reason}",
-        "error.no_token": "refaça o login do Claude Code - credenciais sem accessToken",
-        "error.unauthorized": "token recusado (401): rode `claude` para renovar",
+        "error.no_token": "refaça o login no {agent} - credenciais sem accessToken",
+        "error.unauthorized": "token recusado (401) - refaça o login no {agent}",
         "error.no_headers": "resposta HTTP {code} sem headers de uso",
         "error.network": "rede: {reason}",
         "error.no_tray": "bandeja do sistema indisponível",
